@@ -4,7 +4,6 @@
 //
 //  Created by Taras Buhra on 28.11.2025.
 //
-
 import SwiftUI
 
 // MARK: - Main View
@@ -63,7 +62,7 @@ struct MainView: View {
     
     // MARK: - Header View
     private var headerView: some View {
-        VStack(spacing: 8) {
+        VStack(spacing: 6) {
             HStack {
                 Spacer()
                 
@@ -71,26 +70,27 @@ struct MainView: View {
                     showingSettings = true
                 }) {
                     Image(systemName: "gear")
-                        .font(.system(size: 24))
+                        .font(.system(size: 22))
                         .foregroundColor(.white)
-                        .padding()
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 8)
                 }
             }
-            .padding(.horizontal)
             
             Text("💡")
-                .font(.system(size: 48))
+                .font(.system(size: 40))
             
             Text("Графік Світла")
-                .font(.system(size: 24, weight: .bold))
+                .font(.system(size: 22, weight: .bold))
                 .foregroundColor(.white)
             
             Text("Івано-Франківськ")
-                .font(.system(size: 14))
+                .font(.system(size: 13))
                 .foregroundColor(Color(hex: "BBDEFB"))
         }
         .frame(maxWidth: .infinity)
-        .padding(.vertical, 24)
+        .padding(.top, 12)
+        .padding(.bottom, 16)
         .background(Color(hex: "1976D2"))
     }
     
@@ -129,6 +129,7 @@ struct MainView: View {
         }
     }
     
+    // MARK: - Empty State
     private var emptyStateView: some View {
         VStack(spacing: 12) {
             Text("Немає збережених черг")
