@@ -15,13 +15,14 @@ class StorageService {
     
     private let queuesKey = "saved_queues"
     private let updateIntervalKey = "update_interval"
+    private let notificationMinutesKey = "notification_minutes_before"
     
     func saveQueues(_ queues: [PowerQueue]) {
         if let encoded = try? JSONEncoder().encode(queues) {
             UserDefaults.standard.set(encoded, forKey: queuesKey)
         }
     }
-    
+   
     func loadQueues() -> [PowerQueue] {
         guard let data = UserDefaults.standard.data(forKey: queuesKey),
               let queues = try? JSONDecoder().decode([PowerQueue].self, from: data) else {
@@ -35,7 +36,7 @@ class StorageService {
         queues.append(queue)
         saveQueues(queues)
     }
-    
+
     func deleteQueue(_ queue: PowerQueue) {
         var queues = loadQueues()
         queues.removeAll { $0.id == queue.id }
@@ -56,7 +57,7 @@ class StorageService {
     
     func loadUpdateInterval() -> Int {
         let interval = UserDefaults.standard.integer(forKey: updateIntervalKey)
-        return interval > 0 ? interval : 15 // За замовчуванням 15 хвилин
+        return interval > 0 ? interval : 15
     }
     
     func saveScheduleJSON(_ json: String, for queueId: UUID) {
@@ -65,5 +66,14 @@ class StorageService {
     
     func loadScheduleJSON(for queueId: UUID) -> String? {
         return UserDefaults.standard.string(forKey: "schedule_\(queueId.uuidString)")
+    }
+    
+    func saveNotificationMinutes(_ minutes: Int) {
+        UserDefaults.standard.set(minutes, forKey: notificationMinutesKey)
+    }
+    
+    func loadNotificationMinutes() -> Int {
+        let minutes = UserDefaults.standard.integer(forKey: notificationMinutesKey)
+        return minutes > 0 ? minutes : 30 // За замовчуванням 30 хвилин
     }
 }

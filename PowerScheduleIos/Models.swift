@@ -83,7 +83,7 @@ struct ScheduleData: Codable {
     var remainingMinutes: Int {
         totalMinutesWithoutPower % 60
     }
-    
+
     var hourlyTimeline: [Bool] {
         var timeline = Array(repeating: true, count: 24)
         

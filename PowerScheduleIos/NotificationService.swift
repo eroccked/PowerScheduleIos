@@ -25,7 +25,6 @@ class NotificationService {
         }
     }
     
-
     func scheduleShutdownNotifications(shutdowns: [Shutdown], queueName: String) async {
         cancelAllNotifications()
         
@@ -86,11 +85,11 @@ class NotificationService {
             print("Error showing update notification: \(error)")
         }
     }
-
+    
     func cancelAllNotifications() {
         UNUserNotificationCenter.current().removeAllPendingNotificationRequests()
     }
-    
+        
     func cancelNotifications(for queueName: String) {
         UNUserNotificationCenter.current().getPendingNotificationRequests { requests in
             let identifiersToCancel = requests

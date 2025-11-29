@@ -4,7 +4,6 @@
 //
 //  Created by Taras Buhra on 28.11.2025.
 //
-
 import SwiftUI
 
 // MARK: - Settings View
@@ -49,7 +48,16 @@ struct SettingsView: View {
                     Toggle("Дозволити сповіщення", isOn: $viewModel.notificationsEnabled)
                     
                     if viewModel.notificationsEnabled {
-                        Text("✅ Ви отримуватимете сповіщення за 30 хвилин до відключення")
+                        NavigationLink(destination: NotificationTimePickerView(viewModel: viewModel)) {
+                            HStack {
+                                Text("⏰ Попереджати за")
+                                Spacer()
+                                Text(viewModel.notificationTimeText)
+                                    .foregroundColor(.gray)
+                            }
+                        }
+                        
+                        Text("✅ Ви отримуватимете сповіщення за \(viewModel.notificationTimeText) до відключення")
                             .font(.system(size: 12))
                             .foregroundColor(Color(hex: "4CAF50"))
                     } else {
@@ -75,7 +83,6 @@ struct SettingsView: View {
                     }
                 }
                 
-                // Дії
                 Section {
                     Button(action: {
                         viewModel.checkForUpdatesNow()
@@ -132,6 +139,9 @@ struct SettingsView: View {
                 Button("Скасувати", role: .cancel) {}
                 Button("Видалити", role: .destructive) {
                     viewModel.deleteAllQueues()
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                        dismiss()
+                    }
                 }
             } message: {
                 Text("Це видалить всі збережені черги. Цю дію не можна скасувати.")
@@ -151,6 +161,11 @@ class SettingsViewModel: ObservableObject {
             StorageService.shared.saveUpdateInterval(updateInterval)
         }
     }
+    @Published var notificationMinutes: Int = 30 {
+        didSet {
+            StorageService.shared.saveNotificationMinutes(notificationMinutes)
+        }
+    }
     @Published var notificationsEnabled = false
     @Published var totalQueues = 0
     @Published var activeQueues = 0
@@ -158,8 +173,22 @@ class SettingsViewModel: ObservableObject {
     
     private let storageService = StorageService.shared
     
+    var notificationTimeText: String {
+        let hours = notificationMinutes / 60
+        let mins = notificationMinutes % 60
+        
+        if notificationMinutes < 60 {
+            return "\(notificationMinutes) хв"
+        } else if mins == 0 {
+            return "\(hours) год"
+        } else {
+            return "\(hours) год \(mins) хв"
+        }
+    }
+    
     func loadData() {
         updateInterval = storageService.loadUpdateInterval()
+        notificationMinutes = storageService.loadNotificationMinutes()
         checkNotificationPermission()
         updateStats()
     }
@@ -215,8 +244,10 @@ class SettingsViewModel: ObservableObject {
         storageService.saveQueues([])
         NotificationService.shared.cancelAllNotifications()
         updateStats()
+        
     }
 }
+
 
 // MARK: - Preview
 //#Preview {

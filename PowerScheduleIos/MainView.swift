@@ -4,6 +4,7 @@
 //
 //  Created by Taras Buhra on 28.11.2025.
 //
+
 import SwiftUI
 
 // MARK: - Main View
@@ -128,7 +129,6 @@ struct MainView: View {
         }
     }
     
-    // MARK: - Empty State
     private var emptyStateView: some View {
         VStack(spacing: 12) {
             Text("Немає збережених черг")
@@ -144,9 +144,17 @@ struct MainView: View {
     
     // MARK: - Queues List
     private var queuesList: some View {
-        ForEach(viewModel.queues) { queue in
-            QueueCard(queue: queue, viewModel: viewModel)
+        List {
+            ForEach(viewModel.queues) { queue in
+                QueueCard(queue: queue, viewModel: viewModel)
+                    .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
+                    .listRowSeparator(.hidden)
+                    .listRowBackground(Color.clear)
+            }
         }
+        .listStyle(.plain)
+        .scrollContentBackground(.hidden)
+        .frame(height: CGFloat(viewModel.queues.count) * 120)
     }
     
     // MARK: - Add Queue Section
@@ -181,62 +189,106 @@ struct QueueCard: View {
     let queue: PowerQueue
     @ObservedObject var viewModel: MainViewModel
     @State private var showingSchedule = false
-    @State private var showingDeleteAlert = false
+    @State private var schedulePreview: String = "Завантаження..."
+    @State private var statusEmoji: String = "⏳"
     
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack {
-                Text("📍 \(queue.name)")
-                    .font(.system(size: 20, weight: .bold))
-                    .foregroundColor(Color(hex: "1976D2"))
-                Spacer()
-            }
-            
-            Text("Черга: \(queue.queueNumber)")
-                .font(.system(size: 16))
-                .foregroundColor(Color(hex: "424242"))
-            
-            HStack(spacing: 8) {
-                Button(action: {
-                    showingSchedule = true
-                }) {
-                    Text("ПОКАЗАТИ")
-                        .font(.system(size: 14, weight: .bold))
-                        .foregroundColor(.white)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 12)
-                        .background(Color(hex: "4CAF50"))
-                        .cornerRadius(8)
+        Button(action: {
+            showingSchedule = true
+        }) {
+            VStack(alignment: .leading, spacing: 12) {
+                HStack {
+                    Text("📍 \(queue.name)")
+                        .font(.system(size: 20, weight: .bold))
+                        .foregroundColor(Color(hex: "1976D2"))
+                    Spacer()
                 }
                 
-                Button(action: {
-                    showingDeleteAlert = true
-                }) {
-                    Text("ВИДАЛИТИ")
-                        .font(.system(size: 14, weight: .bold))
-                        .foregroundColor(.white)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 12)
-                        .background(Color(hex: "F44336"))
-                        .cornerRadius(8)
+                HStack {
+                    Text("Черга: \(queue.queueNumber)")
+                        .font(.system(size: 16))
+                        .foregroundColor(Color(hex: "424242"))
+                    
+                    Spacer()
+                    
+                    VStack(alignment: .trailing, spacing: 4) {
+                        Text(statusEmoji)
+                            .font(.system(size: 24))
+                        
+                        Text(schedulePreview)
+                            .font(.system(size: 12, weight: .medium))
+                            .foregroundColor(Color(hex: "757575"))
+                            .multilineTextAlignment(.trailing)
+                    }
                 }
             }
+            .padding()
+            .background(Color.white)
+            .cornerRadius(12)
+            .shadow(color: Color.black.opacity(0.1), radius: 4, x: 0, y: 2)
         }
-        .padding()
-        .background(Color.white)
-        .cornerRadius(12)
-        .shadow(color: Color.black.opacity(0.1), radius: 4, x: 0, y: 2)
+        .buttonStyle(PlainButtonStyle())
+        .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+            Button(role: .destructive) {
+                viewModel.deleteQueue(queue)
+            } label: {
+                Label("Видалити", systemImage: "trash")
+            }
+        }
         .sheet(isPresented: $showingSchedule) {
             ScheduleView(queue: queue)
         }
-        .alert("Видалити чергу?", isPresented: $showingDeleteAlert) {
-            Button("Скасувати", role: .cancel) {}
-            Button("Видалити", role: .destructive) {
-                viewModel.deleteQueue(queue)
-            }
-        } message: {
-            Text("Ви впевнені що хочете видалити \"\(queue.name)\"?")
+        .task {
+            await loadPreview()
         }
+    }
+    
+    private func loadPreview() async {
+        do {
+            let scheduleData = try await APIService.shared.fetchSchedule(for: queue.queueNumber)
+            
+            let currentHour = Calendar.current.component(.hour, from: Date())
+            let isPowerOn = scheduleData.hourlyTimeline[currentHour]
+            
+            if isPowerOn {
+                statusEmoji = "🟢"
+                
+                if let nextShutdown = scheduleData.shutdowns.first(where: { shutdown in
+                    let parts = shutdown.from.split(separator: ":").compactMap { Int($0) }
+                    guard parts.count == 2 else { return false }
+                    return parts[0] > currentHour
+                }) {
+                    schedulePreview = "Відключення: \(nextShutdown.from)"
+                } else {
+                    schedulePreview = "Світло є"
+                }
+            } else {
+                statusEmoji = "🔴"
+                
+                if let nextPowerOn = findNextPowerOn(timeline: scheduleData.hourlyTimeline, currentHour: currentHour) {
+                    schedulePreview = "Увімкнуть: ~\(nextPowerOn):00"
+                } else {
+                    schedulePreview = "Зараз відключення"
+                }
+            }
+        } catch {
+            statusEmoji = "⚠️"
+            schedulePreview = "Помилка завантаження"
+        }
+    }
+    
+    private func findNextPowerOn(timeline: [Bool], currentHour: Int) -> Int? {
+        for hour in (currentHour + 1)..<24 {
+            if timeline[hour] {
+                return hour
+            }
+        }
+        for hour in 0..<currentHour {
+            if timeline[hour] {
+                return hour
+            }
+        }
+        return nil
     }
 }
 

@@ -11,11 +11,14 @@ import UserNotifications
 // MARK: - Main App
 @main
 struct PowerScheduleApp: App {
+    @StateObject private var mainViewModel = MainViewModel()
     @UIApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
     
     var body: some Scene {
         WindowGroup {
-            MainView()
+//            MainView()
+            SplashScreenView()
+                            .environmentObject(mainViewModel)
         }
     }
 }

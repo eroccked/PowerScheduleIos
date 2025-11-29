@@ -175,7 +175,6 @@ struct ScheduleView: View {
                 .font(.system(size: 16, weight: .bold))
                 .foregroundColor(Color(hex: "1976D2"))
             
-            // Часові мітки
             HStack {
                 Text("0")
                     .frame(maxWidth: .infinity, alignment: .leading)
@@ -258,5 +257,5 @@ struct ScheduleView: View {
 
 // MARK: - Preview
 //#Preview {
-//    ScheduleView(queue: PowerQueue(name: "test", queueNumber: "5.2"))
+//    ScheduleView(queue: PowerQueue(name: "Тестова", queueNumber: "5.2"))
 //}
