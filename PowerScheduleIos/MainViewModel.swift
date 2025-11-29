@@ -139,15 +139,60 @@ struct AddQueueView: View {
     @ObservedObject var viewModel: MainViewModel
     
     @State private var name = ""
-    @State private var queueNumber = ""
+    @State private var mainQueue = 1
+    @State private var subQueue = 1
+    
+    var queueNumber: String {
+        "\(mainQueue).\(subQueue)"
+    }
     
     var body: some View {
         NavigationStack {
             Form {
                 Section(header: Text("Інформація про чергу")) {
-                    TextField("Назва (наприклад: Квартира, Офіс)", text: $name)
-                    TextField("Черга (наприклад: 5.2)", text: $queueNumber)
-                        .keyboardType(.decimalPad)
+                    TextField("Назва (наприклад: Квартира, Офіс, Дача)", text: $name)
+                }
+                
+                Section(header: Text("Виберіть чергу")) {
+                    HStack {
+                        Spacer()
+                        
+                        Picker("", selection: $mainQueue) {
+                            ForEach(1...10, id: \.self) { number in
+                                Text("\(number)")
+                                    .font(.system(size: 24, weight: .semibold))
+                                    .tag(number)
+                            }
+                        }
+                        .pickerStyle(.wheel)
+                        .frame(width: 80)
+                        
+                        Text(".")
+                            .font(.system(size: 32, weight: .bold))
+                            .foregroundColor(Color(hex: "1976D2"))
+                        
+                        // Підчерга
+                        Picker("", selection: $subQueue) {
+                            ForEach(1...10, id: \.self) { number in
+                                Text("\(number)")
+                                    .font(.system(size: 24, weight: .semibold))
+                                    .tag(number)
+                            }
+                        }
+                        .pickerStyle(.wheel)
+                        .frame(width: 80)
+                        
+                        Spacer()
+                    }
+                    
+                    HStack {
+                        Spacer()
+                        Text("Черга: \(queueNumber)")
+                            .font(.system(size: 20, weight: .bold))
+                            .foregroundColor(Color(hex: "1976D2"))
+                        Spacer()
+                    }
+                    .padding(.vertical, 8)
                 }
                 
                 Section {

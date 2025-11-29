@@ -4,8 +4,9 @@
 //
 //  Created by Taras Buhra on 28.11.2025.
 //
-
 import SwiftUI
+import BackgroundTasks
+import UserNotifications
 
 // MARK: - Main App
 @main
@@ -26,8 +27,7 @@ class AppDelegate: NSObject, UIApplicationDelegate {
         didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey : Any]? = nil
     ) -> Bool {
         UNUserNotificationCenter.current().delegate = self
-        
-        Task {
+                Task {
             await NotificationService.shared.requestAuthorization()
         }
         
@@ -65,7 +65,7 @@ class AppDelegate: NSObject, UIApplicationDelegate {
     
     private func scheduleAppRefresh() {
         let request = BGAppRefreshTaskRequest(identifier: "com.powerschedule.refresh")
-        request.earliestBeginDate = Date(timeIntervalSinceNow: 15 * 60)
+        request.earliestBeginDate = Date(timeIntervalSinceNow: 15 * 60) // 15 хвилин
         
         do {
             try BGTaskScheduler.shared.submit(request)
