@@ -48,6 +48,9 @@ struct MainView: View {
             }
             .sheet(isPresented: $showingSettings) {
                 SettingsView()
+                    .onDisappear {
+                        viewModel.loadQueues()
+                    }
             }
             .alert("Помилка", isPresented: $viewModel.showError) {
                 Button("OK", role: .cancel) {}
@@ -145,27 +148,16 @@ struct MainView: View {
     
     // MARK: - Queues List
     private var queuesList: some View {
-        List {
-            ForEach(viewModel.queues) { queue in
-                QueueCard(queue: queue, viewModel: viewModel)
-                    .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
-                    .listRowSeparator(.hidden)
-                    .listRowBackground(Color.clear)
-            }
+        ForEach(viewModel.queues) { queue in
+            QueueCard(queue: queue, viewModel: viewModel)
+                .padding(.horizontal, 16)
+                .padding(.vertical, 4)
         }
-        .listStyle(.plain)
-        .scrollContentBackground(.hidden)
-        .frame(height: CGFloat(viewModel.queues.count) * 120)
     }
     
     // MARK: - Add Queue Section
     private var addQueueSection: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("➕ Додати нову чергу:")
-                .font(.system(size: 18, weight: .bold))
-                .foregroundColor(Color(hex: "1976D2"))
-                .padding(.top, 24)
-            
             Button(action: {
                 showingAddQueue = true
             }) {
@@ -181,6 +173,7 @@ struct MainView: View {
                 .background(Color(hex: "4CAF50"))
                 .cornerRadius(12)
             }
+            .padding(.top, 24)
         }
     }
 }
@@ -229,10 +222,29 @@ struct QueueCard: View {
             .shadow(color: Color.black.opacity(0.1), radius: 4, x: 0, y: 2)
         }
         .buttonStyle(PlainButtonStyle())
-        .swipeActions(edge: .trailing, allowsFullSwipe: true) {
-            Button(role: .destructive) {
+        .contextMenu {
+            Button(action: {
+                Task {
+                    await loadPreview()
+                }
+            }) {
+                Label("Оновити графік", systemImage: "arrow.clockwise")
+            }
+            
+            Button(action: {
+                toggleNotifications()
+            }) {
+                Label(
+                    queue.isNotificationsEnabled ? "Вимкнути сповіщення" : "Увімкнути сповіщення",
+                    systemImage: queue.isNotificationsEnabled ? "bell.slash.fill" : "bell.fill"
+                )
+            }
+            
+            Divider()
+            
+            Button(role: .destructive, action: {
                 viewModel.deleteQueue(queue)
-            } label: {
+            }) {
                 Label("Видалити", systemImage: "trash")
             }
         }
@@ -290,6 +302,12 @@ struct QueueCard: View {
             }
         }
         return nil
+    }
+    
+    private func toggleNotifications() {
+        var updatedQueue = queue
+        updatedQueue.isNotificationsEnabled.toggle()
+        viewModel.updateQueue(updatedQueue)
     }
 }
 
