@@ -65,39 +65,36 @@ struct MainView: View {
     
     // MARK: - Header View
     private var headerView: some View {
-        VStack(spacing: 6) {
-            HStack {
-                Spacer()
+        HStack(alignment: .center, spacing: 12) {
+            Text("💡")
+                .font(.system(size: 36))
+            
+            VStack(alignment: .leading, spacing: 2) {
+                Text("Графік Світла")
+                    .font(.system(size: 20, weight: .bold))
+                    .foregroundColor(.white)
                 
-                Button(action: {
-                    showingSettings = true
-                }) {
-                    Image(systemName: "gear")
-                        .font(.system(size: 22))
-                        .foregroundColor(.white)
-                        .padding(.horizontal, 16)
-                        .padding(.vertical, 8)
-                }
+                Text("Івано-Франківськ")
+                    .font(.system(size: 12))
+                    .foregroundColor(Color(hex: "BBDEFB"))
             }
             
-            Text("💡")
-                .font(.system(size: 40))
+            Spacer()
             
-            Text("Графік Світла")
-                .font(.system(size: 22, weight: .bold))
-                .foregroundColor(.white)
-            
-            Text("Івано-Франківськ")
-                .font(.system(size: 13))
-                .foregroundColor(Color(hex: "BBDEFB"))
+            Button(action: {
+                showingSettings = true
+            }) {
+                Image(systemName: "gear")
+                    .font(.system(size: 22))
+                    .foregroundColor(.white)
+                    .padding(8)
+            }
         }
-        .frame(maxWidth: .infinity)
-        .padding(.top, 12)
-        .padding(.bottom, 16)
+        .padding(.horizontal, 16)
+        .padding(.vertical, 12)
         .background(Color(hex: "1976D2"))
     }
     
-    // MARK: - Update Banner
     private var updateBanner: some View {
         HStack {
             Text("🔄 Автооновлення кожні \(viewModel.updateInterval) хв")
@@ -342,3 +339,4 @@ extension Color {
 //#Preview {
 //    MainView()
 //}
+
