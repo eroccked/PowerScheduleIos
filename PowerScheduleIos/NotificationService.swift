@@ -4,7 +4,6 @@
 //
 //  Created by Taras Buhra on 28.11.2025.
 //
-
 import Foundation
 import UserNotifications
 
@@ -89,7 +88,7 @@ class NotificationService {
     func cancelAllNotifications() {
         UNUserNotificationCenter.current().removeAllPendingNotificationRequests()
     }
-        
+    
     func cancelNotifications(for queueName: String) {
         UNUserNotificationCenter.current().getPendingNotificationRequests { requests in
             let identifiersToCancel = requests

@@ -11,14 +11,11 @@ import UserNotifications
 // MARK: - Main App
 @main
 struct PowerScheduleApp: App {
-    @StateObject private var mainViewModel = MainViewModel()
     @UIApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
     
     var body: some Scene {
         WindowGroup {
-//            MainView()
-            SplashScreenView()
-                            .environmentObject(mainViewModel)
+            MainView()
         }
     }
 }
@@ -30,7 +27,8 @@ class AppDelegate: NSObject, UIApplicationDelegate {
         didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey : Any]? = nil
     ) -> Bool {
         UNUserNotificationCenter.current().delegate = self
-                Task {
+        
+        Task {
             await NotificationService.shared.requestAuthorization()
         }
         
