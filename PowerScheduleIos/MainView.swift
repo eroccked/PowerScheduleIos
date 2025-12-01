@@ -11,6 +11,7 @@ struct MainView: View {
     @StateObject private var viewModel = MainViewModel()
     @State private var showingAddQueue = false
     @State private var showingSettings = false
+    @State private var refreshTrigger = UUID()
     
     var body: some View {
         NavigationStack {
@@ -105,6 +106,7 @@ struct MainView: View {
             
             Button(action: {
                 viewModel.checkForUpdatesNow()
+                refreshTrigger = UUID()
             }) {
                 Text("Оновити зараз")
                     .font(.system(size: 12, weight: .semibold))
@@ -146,7 +148,7 @@ struct MainView: View {
     // MARK: - Queues List
     private var queuesList: some View {
         ForEach(viewModel.queues) { queue in
-            QueueCard(queue: queue, viewModel: viewModel)
+            QueueCard(queue: queue, viewModel: viewModel, refreshTrigger: refreshTrigger)
                 .padding(.horizontal, 16)
                 .padding(.vertical, 4)
         }
@@ -154,24 +156,23 @@ struct MainView: View {
     
     // MARK: - Add Queue Section
     private var addQueueSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Button(action: {
-                showingAddQueue = true
-            }) {
-                HStack {
-                    Image(systemName: "plus.circle.fill")
-                        .font(.system(size: 20))
-                    Text("ДОДАТИ ЧЕРГУ")
-                        .font(.system(size: 16, weight: .bold))
-                }
-                .foregroundColor(.white)
-                .frame(maxWidth: .infinity)
-                .padding()
-                .background(Color(hex: "4CAF50"))
-                .cornerRadius(12)
+        Button(action: {
+            showingAddQueue = true
+        }) {
+            HStack {
+                Image(systemName: "plus.circle.fill")
+                    .font(.system(size: 20))
+                Text("ДОДАТИ ЧЕРГУ")
+                    .font(.system(size: 16, weight: .bold))
             }
-            .padding(.top, 24)
+            .foregroundColor(.white)
+            .frame(maxWidth: .infinity)
+            .padding()
+            .background(Color(hex: "4CAF50"))
+            .cornerRadius(12)
         }
+        .padding(.horizontal, 16)
+        .padding(.top, 24)
     }
 }
 
@@ -179,9 +180,12 @@ struct MainView: View {
 struct QueueCard: View {
     let queue: PowerQueue
     @ObservedObject var viewModel: MainViewModel
+    let refreshTrigger: UUID
+    
     @State private var showingSchedule = false
     @State private var schedulePreview: String = "Завантаження..."
     @State private var statusEmoji: String = "⏳"
+    @State private var timer: Timer?
     
     var body: some View {
         Button(action: {
@@ -248,9 +252,29 @@ struct QueueCard: View {
         .sheet(isPresented: $showingSchedule) {
             ScheduleView(queue: queue)
         }
-        .task {
+        .task(id: refreshTrigger) {
             await loadPreview()
+            startAutoRefresh()
         }
+        .onDisappear {
+            stopAutoRefresh()
+        }
+    }
+    
+    // MARK: - Auto Refresh
+    private func startAutoRefresh() {
+        stopAutoRefresh()
+        
+        timer = Timer.scheduledTimer(withTimeInterval: 60, repeats: true) { _ in
+            Task {
+                await loadPreview()
+            }
+        }
+    }
+    
+    private func stopAutoRefresh() {
+        timer?.invalidate()
+        timer = nil
     }
     
     private func loadPreview() async {
@@ -334,9 +358,3 @@ extension Color {
         )
     }
 }
-
-// MARK: - Preview
-//#Preview {
-//    MainView()
-//}
-
