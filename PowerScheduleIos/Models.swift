@@ -4,11 +4,10 @@
 //
 //  Created by Taras Buhra on 28.11.2025.
 //
-
 import Foundation
 
 // MARK: - PowerQueue Model
-struct PowerQueue: Identifiable, Codable {
+struct PowerQueue: Identifiable, Codable, Equatable {
     let id: UUID
     var name: String
     var queueNumber: String
@@ -22,6 +21,15 @@ struct PowerQueue: Identifiable, Codable {
         self.queueNumber = queueNumber
         self.isNotificationsEnabled = isNotificationsEnabled
         self.isAutoUpdateEnabled = isAutoUpdateEnabled
+    }
+    
+    // Equatable conformance
+    static func == (lhs: PowerQueue, rhs: PowerQueue) -> Bool {
+        return lhs.id == rhs.id &&
+               lhs.name == rhs.name &&
+               lhs.queueNumber == rhs.queueNumber &&
+               lhs.isNotificationsEnabled == rhs.isNotificationsEnabled &&
+               lhs.isAutoUpdateEnabled == rhs.isAutoUpdateEnabled
     }
 }
 

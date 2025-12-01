@@ -186,6 +186,14 @@ struct QueueCard: View {
     @State private var schedulePreview: String = "Завантаження..."
     @State private var statusEmoji: String = "⏳"
     @State private var timer: Timer?
+    @State private var currentQueue: PowerQueue
+    
+    init(queue: PowerQueue, viewModel: MainViewModel, refreshTrigger: UUID) {
+        self.queue = queue
+        self.viewModel = viewModel
+        self.refreshTrigger = refreshTrigger
+        _currentQueue = State(initialValue: queue)
+    }
     
     var body: some View {
         Button(action: {
@@ -236,8 +244,8 @@ struct QueueCard: View {
                 toggleNotifications()
             }) {
                 Label(
-                    queue.isNotificationsEnabled ? "Вимкнути сповіщення" : "Увімкнути сповіщення",
-                    systemImage: queue.isNotificationsEnabled ? "bell.slash.fill" : "bell.fill"
+                    currentQueue.isNotificationsEnabled ? "Вимкнути сповіщення" : "Увімкнути сповіщення",
+                    systemImage: currentQueue.isNotificationsEnabled ? "bell.slash.fill" : "bell.fill"
                 )
             }
             
@@ -255,9 +263,20 @@ struct QueueCard: View {
         .task(id: refreshTrigger) {
             await loadPreview()
             startAutoRefresh()
+            syncQueueState()
         }
         .onDisappear {
             stopAutoRefresh()
+        }
+        .onChange(of: viewModel.queues) { _ in
+            syncQueueState()
+        }
+    }
+    
+    // MARK: - Sync Queue State
+    private func syncQueueState() {
+        if let updatedQueue = viewModel.queues.first(where: { $0.id == queue.id }) {
+            currentQueue = updatedQueue
         }
     }
     
@@ -287,6 +306,7 @@ struct QueueCard: View {
             if isPowerOn {
                 statusEmoji = "🟢"
                 
+                // Шукаємо наступне відключення сьогодні
                 if let nextShutdown = scheduleData.shutdowns.first(where: { shutdown in
                     let parts = shutdown.from.split(separator: ":").compactMap { Int($0) }
                     guard parts.count == 2 else { return false }
@@ -294,15 +314,26 @@ struct QueueCard: View {
                 }) {
                     schedulePreview = "Відключення: \(nextShutdown.from)"
                 } else {
-                    schedulePreview = "Світло є"
+                    // Якщо сьогодні немає - шукаємо перше відключення завтра
+                    if let firstShutdownTomorrow = scheduleData.shutdowns.first {
+                        schedulePreview = "Відключення: завтра \(firstShutdownTomorrow.from)"
+                    } else {
+                        schedulePreview = "Світло є"
+                    }
                 }
             } else {
                 statusEmoji = "🔴"
                 
+                // Шукаємо наступне увімкнення сьогодні
                 if let nextPowerOn = findNextPowerOn(timeline: scheduleData.hourlyTimeline, currentHour: currentHour) {
                     schedulePreview = "Увімкнуть: ~\(nextPowerOn):00"
                 } else {
-                    schedulePreview = "Зараз відключення"
+                    // Якщо сьогодні не увімкнуть - шукаємо перше увімкнення завтра
+                    if let firstPowerOnHour = scheduleData.hourlyTimeline.firstIndex(where: { $0 == true }) {
+                        schedulePreview = "Увімкнуть: завтра ~\(firstPowerOnHour):00"
+                    } else {
+                        schedulePreview = "Зараз відключення"
+                    }
                 }
             }
         } catch {
@@ -326,9 +357,8 @@ struct QueueCard: View {
     }
     
     private func toggleNotifications() {
-        var updatedQueue = queue
-        updatedQueue.isNotificationsEnabled.toggle()
-        viewModel.updateQueue(updatedQueue)
+        currentQueue.isNotificationsEnabled.toggle()
+        viewModel.updateQueue(currentQueue)
     }
 }
 
