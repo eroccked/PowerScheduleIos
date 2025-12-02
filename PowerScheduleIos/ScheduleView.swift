@@ -4,7 +4,6 @@
 //
 //  Created by Taras Buhra on 28.11.2025.
 //
-
 import SwiftUI
 
 // MARK: - Schedule View
@@ -233,7 +232,6 @@ struct ScheduleView: View {
                 .font(.system(size: 16, weight: .semibold))
                 .foregroundColor(.black)
             
-            // Годинні позначки
             HStack {
                 Text("0")
                     .frame(maxWidth: .infinity, alignment: .leading)
