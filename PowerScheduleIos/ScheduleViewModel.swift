@@ -4,7 +4,6 @@
 //
 //  Created by Taras Buhra on 28.11.2025.
 //
-
 import Foundation
 import SwiftUI
 
@@ -51,6 +50,11 @@ class ScheduleViewModel: ObservableObject {
                 let data = try await apiService.fetchSchedule(for: queue.queueNumber)
                 scheduleData = data
                 isLoading = false
+                
+                // Якщо сповіщення увімкнені, перепланувати їх з новим графіком
+                if notificationsEnabled {
+                    scheduleNotifications()
+                }
             } catch {
                 errorMessage = error.localizedDescription
                 isLoading = false
@@ -71,14 +75,17 @@ class ScheduleViewModel: ObservableObject {
         guard let shutdowns = scheduleData?.shutdowns else { return }
         
         Task {
+            let minutesBefore = storageService.loadNotificationMinutes()
+            
             await notificationService.scheduleShutdownNotifications(
                 shutdowns: shutdowns,
-                queueName: queue.name
+                queueName: queue.name,
+                minutesBefore: minutesBefore
             )
         }
     }
     
     private func cancelNotifications() {
-        notificationService.cancelAllNotifications()
+        notificationService.cancelNotifications(for: queue.name)
     }
 }

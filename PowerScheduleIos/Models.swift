@@ -23,7 +23,6 @@ struct PowerQueue: Identifiable, Codable, Equatable {
         self.isAutoUpdateEnabled = isAutoUpdateEnabled
     }
     
-    // Equatable conformance
     static func == (lhs: PowerQueue, rhs: PowerQueue) -> Bool {
         return lhs.id == rhs.id &&
                lhs.name == rhs.name &&
@@ -60,7 +59,7 @@ struct Shutdown: Codable, Identifiable {
         return toMinutes - fromMinutes
     }
     
-    func notificationDate() -> Date? {
+    func notificationDate(minutesBefore: Int) -> Date? {
         let parts = from.split(separator: ":").compactMap { Int($0) }
         guard parts.count == 2 else { return nil }
         
@@ -69,7 +68,8 @@ struct Shutdown: Codable, Identifiable {
         components.minute = parts[1]
         
         guard let date = Calendar.current.date(from: components) else { return nil }
-        return Calendar.current.date(byAdding: .minute, value: -30, to: date)
+        // Віднімаємо потрібну кількість хвилин з налаштувань
+        return Calendar.current.date(byAdding: .minute, value: -minutesBefore, to: date)
     }
 }
 
