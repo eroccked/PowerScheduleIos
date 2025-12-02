@@ -4,7 +4,6 @@
 //
 //  Created by Taras Buhra on 29.11.2025.
 //
-
 import SwiftUI
 
 // MARK: - Notification Time Picker View
@@ -23,110 +22,152 @@ struct NotificationTimePickerView: View {
     }
     
     var body: some View {
-        VStack(spacing: 24) {
-            Text("Попереджати за")
-                .font(.system(size: 28, weight: .bold))
-                .padding(.top, 40)
-            
-            Text("Виберіть за скільки часу ви хочете отримати сповіщення перед відключенням")
-                .font(.system(size: 16))
-                .foregroundColor(.gray)
-                .multilineTextAlignment(.center)
-                .padding(.horizontal)
-            
-            Spacer()
-            
-            HStack(spacing: 0) {
-                Spacer()
-                
-                Picker("", selection: $selectedHours) {
-                    ForEach(0...5, id: \.self) { hour in
-                        Text("\(hour)")
-                            .font(.system(size: 32))
-                            .tag(hour)
-                    }
-                }
-                .pickerStyle(.wheel)
-                .frame(width: 80)
-                
-                Text("год")
-                    .font(.system(size: 20, weight: .medium))
-                    .foregroundColor(.gray)
-                    .padding(.horizontal, 8)
-                
-                Picker("", selection: $selectedMinutes) {
-                    ForEach([0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55], id: \.self) { minute in
-                        Text("\(minute)")
-                            .font(.system(size: 32))
-                            .tag(minute)
-                    }
-                }
-                .pickerStyle(.wheel)
-                .frame(width: 80)
-                
-                Text("хв")
-                    .font(.system(size: 20, weight: .medium))
-                    .foregroundColor(.gray)
-                    .padding(.horizontal, 8)
-                
-                Spacer()
-            }
-            .padding()
-            .background(
-                RoundedRectangle(cornerRadius: 16)
-                    .fill(Color(hex: "F5F5F5"))
+        ZStack {
+            LinearGradient(
+                colors: [
+                    Color(hex: "B8E0E8"),
+                    Color(hex: "C0E5DB"),
+                    Color(hex: "C8E6D5")
+                ],
+                startPoint: .top,
+                endPoint: .bottom
             )
-            .padding(.horizontal)
+            .ignoresSafeArea()
             
-            Spacer()
-            
-            VStack(spacing: 8) {
-                Text("Приклад сповіщення:")
-                    .font(.system(size: 14))
-                    .foregroundColor(.gray)
-                
-                HStack {
-                    Image(systemName: "bell.badge.fill")
-                        .foregroundColor(.orange)
+            VStack(spacing: 20) {
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Попереджати за")
+                        .font(.system(size: 28, weight: .bold))
+                        .foregroundColor(.black)
                     
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text("⚡ Скоро відключення!")
-                            .font(.system(size: 14, weight: .bold))
-                        
-                        Text(getExampleText())
-                            .font(.system(size: 12))
-                            .foregroundColor(.gray)
-                    }
-                    
-                    Spacer()
+                    Text("Виберіть за скільки часу отримати сповіщення перед відключенням")
+                        .font(.system(size: 14))
+                        .foregroundColor(.black.opacity(0.6))
                 }
-                .padding()
-                .background(Color.white)
-                .cornerRadius(12)
-                .shadow(color: Color.black.opacity(0.1), radius: 4)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.horizontal, 18)
+                .padding(.top, 16)
+                
+                Spacer()
+                
+                VStack(spacing: 14) {
+                    HStack(spacing: 0) {
+                        Spacer()
+                        
+                        Picker("", selection: $selectedHours) {
+                            ForEach(0...5, id: \.self) { hour in
+                                Text("\(hour)")
+                                    .font(.system(size: 28, weight: .medium))
+                                    .foregroundColor(.black)
+                                    .tag(hour)
+                            }
+                        }
+                        .pickerStyle(.wheel)
+                        .frame(width: 70)
+                        
+                        Text("год")
+                            .font(.system(size: 18, weight: .medium))
+                            .foregroundColor(.black.opacity(0.6))
+                            .padding(.horizontal, 10)
+                        
+                        Picker("", selection: $selectedMinutes) {
+                            ForEach([0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55], id: \.self) { minute in
+                                Text("\(minute)")
+                                    .font(.system(size: 28, weight: .medium))
+                                    .foregroundColor(.black)
+                                    .tag(minute)
+                            }
+                        }
+                        .pickerStyle(.wheel)
+                        .frame(width: 70)
+                        
+                        Text("хв")
+                            .font(.system(size: 18, weight: .medium))
+                            .foregroundColor(.black.opacity(0.6))
+                            .padding(.horizontal, 10)
+                        
+                        Spacer()
+                    }
+                    .padding(.vertical, 18)
+                    .background(
+                        RoundedRectangle(cornerRadius: 14)
+                            .fill(Color.white.opacity(0.85))
+                            .shadow(color: Color.black.opacity(0.08), radius: 7, x: 0, y: 2)
+                    )
+                    .padding(.horizontal, 18)
+                }
+                
+                Spacer()
+                
+                VStack(spacing: 10) {
+                    Text("Приклад сповіщення:")
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundColor(.black.opacity(0.6))
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                    
+                    HStack(spacing: 14) {
+                        Image(systemName: "app.badge.fill")
+                            .font(.system(size: 21))
+                            .foregroundColor(Color(hex: "FF9500"))
+                        
+                        VStack(alignment: .leading, spacing: 3) {
+                            Text("⚡️ Скоро відключення!")
+                                .font(.system(size: 15, weight: .semibold))
+                                .foregroundColor(.black)
+                            
+                            Text(getExampleText())
+                                .font(.system(size: 13))
+                                .foregroundColor(.black.opacity(0.6))
+                        }
+                        
+                        Spacer()
+                    }
+                    .padding(14)
+                    .background(
+                        RoundedRectangle(cornerRadius: 11)
+                            .fill(Color.white.opacity(0.85))
+                            .shadow(color: Color.black.opacity(0.08), radius: 5, x: 0, y: 2)
+                    )
+                }
+                .padding(.horizontal, 18)
+                
+                Spacer()
+                
+                Button(action: {
+                    let totalMinutes = selectedHours * 60 + selectedMinutes
+                    viewModel.notificationMinutes = totalMinutes > 0 ? totalMinutes : 5
+                    dismiss()
+                }) {
+                    Text("Зберегти")
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundColor(.black)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 14)
+                        .background(
+                            RoundedRectangle(cornerRadius: 14)
+                                .fill(Color.white.opacity(0.85))
+                                .shadow(color: Color.black.opacity(0.1), radius: 7, x: 0, y: 2)
+                        )
+                }
+                .padding(.horizontal, 18)
+                .padding(.bottom, 28)
             }
-            .padding(.horizontal)
-            
-            Spacer()
-            
-            Button(action: {
-                let totalMinutes = selectedHours * 60 + selectedMinutes
-                viewModel.notificationMinutes = totalMinutes > 0 ? totalMinutes : 5 // Мінімум 5 хв
-                dismiss()
-            }) {
-                Text("Зберегти")
-                    .font(.system(size: 18, weight: .semibold))
-                    .foregroundColor(.white)
-                    .frame(maxWidth: .infinity)
-                    .padding()
-                    .background(Color(hex: "1976D2"))
-                    .cornerRadius(16)
-            }
-            .padding(.horizontal)
-            .padding(.bottom, 32)
         }
-        .navigationTitle("Час попередження")
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .navigationBarLeading) {
+                Button(action: {
+                    dismiss()
+                }) {
+                    HStack(spacing: 4) {
+                        Image(systemName: "chevron.left")
+                            .font(.system(size: 14, weight: .semibold))
+                        Text("Назад")
+                    }
+                    .foregroundColor(.black)
+                }
+            }
+        }
     }
     
     // MARK: - Helper Functions
@@ -151,3 +192,10 @@ struct NotificationTimePickerView: View {
         return "Дім: відключення о 14:00 (\(timeText))"
     }
 }
+
+// MARK: - Preview
+// #Preview {
+//     NavigationStack {
+//         NotificationTimePickerView(viewModel: SettingsViewModel())
+//     }
+// }

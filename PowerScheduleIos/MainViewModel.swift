@@ -4,7 +4,6 @@
 //
 //  Created by Taras Buhra on 28.11.2025.
 //
-
 import Foundation
 import SwiftUI
 
@@ -133,7 +132,7 @@ class MainViewModel: ObservableObject {
     }
 }
 
-// MARK: - Add Queue View
+// MARK: - Add Queue View (Redesign у стилі Дія)
 struct AddQueueView: View {
     @Environment(\.dismiss) var dismiss
     @ObservedObject var viewModel: MainViewModel
@@ -148,77 +147,167 @@ struct AddQueueView: View {
     
     var body: some View {
         NavigationStack {
-            Form {
-                Section(header: Text("Інформація про чергу")) {
-                    TextField("Назва (наприклад: Квартира, Офіс, Дача)", text: $name)
-                }
+            ZStack {
+                LinearGradient(
+                    colors: [
+                        Color(hex: "B8E0E8"),
+                        Color(hex: "C0E5DB"),
+                        Color(hex: "C8E6D5")
+                    ],
+                    startPoint: .top,
+                    endPoint: .bottom
+                )
+                .ignoresSafeArea()
                 
-                Section(header: Text("Виберіть чергу")) {
-                    HStack {
-                        Spacer()
+                VStack(spacing: 20) {
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("Нова черга")
+                            .font(.system(size: 28, weight: .bold))
+                            .foregroundColor(.black)
                         
-                        Picker("", selection: $mainQueue) {
-                            ForEach(1...10, id: \.self) { number in
-                                Text("\(number)")
-                                    .font(.system(size: 24, weight: .semibold))
-                                    .tag(number)
+                        Text("Додайте інформацію про вашу чергу відключень")
+                            .font(.system(size: 14))
+                            .foregroundColor(.black.opacity(0.6))
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.horizontal, 18)
+                    .padding(.top, 8)
+                    
+                    ScrollView {
+                        VStack(spacing: 16) {
+                            VStack(alignment: .leading, spacing: 8) {
+                                Text("Назва")
+                                    .font(.system(size: 13, weight: .semibold))
+                                    .foregroundColor(.black.opacity(0.6))
+                                    .padding(.horizontal, 22)
+                                
+                                VStack(spacing: 0) {
+                                    TextField("Квартира, Офіс, Дача", text: $name)
+                                        .font(.system(size: 15))
+                                        .foregroundColor(.black)
+                                        .padding(16)
+                                }
+                                .background(
+                                    RoundedRectangle(cornerRadius: 14)
+                                        .fill(Color.white.opacity(0.85))
+                                        .shadow(color: Color.black.opacity(0.08), radius: 7, x: 0, y: 2)
+                                )
+                                .padding(.horizontal, 18)
                             }
-                        }
-                        .pickerStyle(.wheel)
-                        .frame(width: 80)
-                        
-                        Text(".")
-                            .font(.system(size: 32, weight: .bold))
-                            .foregroundColor(Color(hex: "1976D2"))
-                        
-                        // Підчерга
-                        Picker("", selection: $subQueue) {
-                            ForEach(1...10, id: \.self) { number in
-                                Text("\(number)")
-                                    .font(.system(size: 24, weight: .semibold))
-                                    .tag(number)
+                            
+                            VStack(alignment: .leading, spacing: 8) {
+                                Text("Черга")
+                                    .font(.system(size: 13, weight: .semibold))
+                                    .foregroundColor(.black.opacity(0.6))
+                                    .padding(.horizontal, 22)
+                                
+                                VStack(spacing: 16) {
+                                    HStack(spacing: 0) {
+                                        Spacer()
+                                        
+                                        Picker("", selection: $mainQueue) {
+                                            ForEach(1...10, id: \.self) { number in
+                                                Text("\(number)")
+                                                    .font(.system(size: 28, weight: .semibold))
+                                                    .foregroundColor(.black)
+                                                    .tag(number)
+                                            }
+                                        }
+                                        .pickerStyle(.wheel)
+                                        .frame(width: 70)
+                                        
+                                        Text(".")
+                                            .font(.system(size: 32, weight: .bold))
+                                            .foregroundColor(.black)
+                                        
+                                        Picker("", selection: $subQueue) {
+                                            ForEach(1...10, id: \.self) { number in
+                                                Text("\(number)")
+                                                    .font(.system(size: 28, weight: .semibold))
+                                                    .foregroundColor(.black)
+                                                    .tag(number)
+                                            }
+                                        }
+                                        .pickerStyle(.wheel)
+                                        .frame(width: 70)
+                                        
+                                        Spacer()
+                                    }
+                                    .padding(.vertical, 12)
+                                    
+                                    VStack(spacing: 6) {
+                                        Text("Обрана черга:")
+                                            .font(.system(size: 13))
+                                            .foregroundColor(.black.opacity(0.6))
+                                        
+                                        Text(queueNumber)
+                                            .font(.system(size: 24, weight: .bold))
+                                            .foregroundColor(.black)
+                                    }
+                                    .padding(.bottom, 8)
+                                }
+                                .background(
+                                    RoundedRectangle(cornerRadius: 14)
+                                        .fill(Color.white.opacity(0.85))
+                                        .shadow(color: Color.black.opacity(0.08), radius: 7, x: 0, y: 2)
+                                )
+                                .padding(.horizontal, 18)
                             }
+                            
+                            HStack(spacing: 10) {
+                                Image(systemName: "info.circle.fill")
+                                    .font(.system(size: 16))
+                                    .foregroundColor(.black.opacity(0.4))
+                                
+                                Text("Номер черги можна знайти в квитанції або на сайті вашого електропостачальника")
+                                    .font(.system(size: 12))
+                                    .foregroundColor(.black.opacity(0.6))
+                            }
+                            .padding(14)
+                            .background(
+                                RoundedRectangle(cornerRadius: 12)
+                                    .fill(Color.white.opacity(0.5))
+                            )
+                            .padding(.horizontal, 18)
                         }
-                        .pickerStyle(.wheel)
-                        .frame(width: 80)
-                        
-                        Spacer()
+                        .padding(.bottom, 20)
                     }
                     
-                    HStack {
-                        Spacer()
-                        Text("Черга: \(queueNumber)")
-                            .font(.system(size: 20, weight: .bold))
-                            .foregroundColor(Color(hex: "1976D2"))
-                        Spacer()
-                    }
-                    .padding(.vertical, 8)
-                }
-                
-                Section {
+                    Spacer()
+                    
                     Button(action: {
                         viewModel.addQueue(name: name, queueNumber: queueNumber)
                         if viewModel.queues.contains(where: { $0.name == name }) {
                             dismiss()
                         }
                     }) {
-                        HStack {
-                            Spacer()
-                            Text("➕ ДОДАТИ ЧЕРГУ")
-                                .font(.system(size: 16, weight: .bold))
-                            Spacer()
-                        }
+                        Text("Додати чергу")
+                            .font(.system(size: 16, weight: .semibold))
+                            .foregroundColor(.black)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 14)
+                            .background(
+                                RoundedRectangle(cornerRadius: 14)
+                                    .fill(Color.white.opacity(0.85))
+                                    .shadow(color: Color.black.opacity(0.1), radius: 8, x: 0, y: 2)
+                            )
                     }
-                    .foregroundColor(.white)
-                    .listRowBackground(Color(hex: "4CAF50"))
+                    .padding(.horizontal, 18)
+                    .padding(.bottom, 20)
                 }
             }
-            .navigationTitle("Нова черга")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
-                    Button("Скасувати") {
+                    Button(action: {
                         dismiss()
+                    }) {
+                        HStack(spacing: 4) {
+                            Image(systemName: "xmark")
+                                .font(.system(size: 14, weight: .semibold))
+                            Text("Скасувати")
+                        }
+                        .foregroundColor(.black)
                     }
                 }
             }
