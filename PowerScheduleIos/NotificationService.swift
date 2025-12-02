@@ -41,7 +41,6 @@ class NotificationService {
             let content = UNMutableNotificationContent()
             content.title = "⚡ Скоро відключення!"
             
-            // Формуємо текст в залежності від часу
             let timeText = formatTimeText(minutes: minutesBefore)
             content.body = "\(queueName): відключення о \(shutdown.from) (\(timeText))"
             content.sound = .default

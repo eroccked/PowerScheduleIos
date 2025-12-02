@@ -51,7 +51,6 @@ class ScheduleViewModel: ObservableObject {
                 scheduleData = data
                 isLoading = false
                 
-                // Якщо сповіщення увімкнені, перепланувати їх з новим графіком
                 if notificationsEnabled {
                     scheduleNotifications()
                 }

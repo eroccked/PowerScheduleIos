@@ -4,6 +4,7 @@
 //
 //  Created by Taras Buhra on 28.11.2025.
 //
+
 import SwiftUI
 
 // MARK: - Main View
@@ -348,7 +349,6 @@ struct QueueCard: View {
                 }
             }
             
-            // Завжди синхронізуємо стан перед показом
             let _ = syncQueueStateAndReturn()
             
             Button(currentQueue.isNotificationsEnabled ? "Вимкнути сповіщення" : "Увімкнути сповіщення") {
@@ -487,7 +487,7 @@ struct QueueCard: View {
         formatter.locale = Locale(identifier: "uk_UA")
         
         guard let eventDate = formatter.date(from: dateString) else {
-            return true
+            return true 
         }
         
         let calendar = Calendar.current

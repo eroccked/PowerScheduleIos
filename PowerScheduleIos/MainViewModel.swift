@@ -132,7 +132,7 @@ class MainViewModel: ObservableObject {
     }
 }
 
-// MARK: - Add Queue View
+// MARK: - Add Queue View (Redesign у стилі Дія)
 struct AddQueueView: View {
     @Environment(\.dismiss) var dismiss
     @ObservedObject var viewModel: MainViewModel
@@ -234,6 +234,7 @@ struct AddQueueView: View {
                                         Spacer()
                                     }
                                     .padding(.vertical, 12)
+                                    
                                     VStack(spacing: 6) {
                                         Text("Обрана черга:")
                                             .font(.system(size: 13))
@@ -252,6 +253,7 @@ struct AddQueueView: View {
                                 )
                                 .padding(.horizontal, 18)
                             }
+                            
                             HStack(spacing: 9) {
                                 Image(systemName: "info.circle.fill")
                                     .font(.system(size: 14))
@@ -272,7 +274,7 @@ struct AddQueueView: View {
                     }
                     
                     Spacer()
-
+                    
                     Button(action: {
                         viewModel.addQueue(name: name, queueNumber: queueNumber)
                         if viewModel.queues.contains(where: { $0.name == name }) {

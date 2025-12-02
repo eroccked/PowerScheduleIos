@@ -4,6 +4,7 @@
 //
 //  Created by Taras Buhra on 29.11.2025.
 //
+
 import SwiftUI
 
 // MARK: - Notification Time Picker View
@@ -23,6 +24,7 @@ struct NotificationTimePickerView: View {
     
     var body: some View {
         ZStack {
+            // Градієнт у стилі Дія
             LinearGradient(
                 colors: [
                     Color(hex: "B8E0E8"),
@@ -132,7 +134,7 @@ struct NotificationTimePickerView: View {
                 .padding(.horizontal, 18)
                 
                 Spacer()
-                
+
                 Button(action: {
                     let totalMinutes = selectedHours * 60 + selectedMinutes
                     viewModel.notificationMinutes = totalMinutes > 0 ? totalMinutes : 5
