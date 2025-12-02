@@ -20,7 +20,6 @@ struct ScheduleView: View {
     var body: some View {
         NavigationStack {
             ZStack {
-                // Градієнт у стилі Дія
                 LinearGradient(
                     colors: [
                         Color(hex: "B8E0E8"),
@@ -86,17 +85,17 @@ struct ScheduleView: View {
                 HStack {
                     VStack(alignment: .leading, spacing: 4) {
                         Text(queue.name)
-                            .font(.system(size: 22, weight: .bold))
+                            .font(.system(size: 20, weight: .bold))
                             .foregroundColor(.black)
                         
                         Text("Черга \(queue.queueNumber)")
-                            .font(.system(size: 13))
+                            .font(.system(size: 12))
                             .foregroundColor(.black.opacity(0.6))
                     }
                     Spacer()
                 }
-                .padding(.horizontal, 18)
-                .padding(.top, 6)
+                .padding(.horizontal, 16)
+                .padding(.top, 4)
                 
                 infoCard(data)
                 
@@ -114,19 +113,19 @@ struct ScheduleView: View {
     
     // MARK: - Info Card
     private func infoCard(_ data: ScheduleData) -> some View {
-        VStack(alignment: .leading, spacing: 14) {
+        VStack(alignment: .leading, spacing: 12) {
             HStack {
                 Image(systemName: "calendar")
-                    .font(.system(size: 16))
+                    .font(.system(size: 14))
                     .foregroundColor(.black)
-                    .frame(width: 22)
+                    .frame(width: 20)
                 
                 VStack(alignment: .leading, spacing: 2) {
                     Text("Дата")
-                        .font(.system(size: 12))
+                        .font(.system(size: 11))
                         .foregroundColor(.black.opacity(0.5))
                     Text(data.eventDate)
-                        .font(.system(size: 15, weight: .semibold))
+                        .font(.system(size: 14, weight: .semibold))
                         .foregroundColor(.black)
                 }
             }
@@ -135,16 +134,16 @@ struct ScheduleView: View {
             
             HStack {
                 Image(systemName: "clock")
-                    .font(.system(size: 16))
+                    .font(.system(size: 14))
                     .foregroundColor(.black)
-                    .frame(width: 22)
+                    .frame(width: 20)
                 
                 VStack(alignment: .leading, spacing: 2) {
                     Text("Оновлено")
-                        .font(.system(size: 12))
+                        .font(.system(size: 11))
                         .foregroundColor(.black.opacity(0.5))
                     Text(data.createdAt)
-                        .font(.system(size: 15, weight: .semibold))
+                        .font(.system(size: 14, weight: .semibold))
                         .foregroundColor(.black)
                 }
             }
@@ -153,27 +152,27 @@ struct ScheduleView: View {
             
             HStack {
                 Image(systemName: "checkmark.seal")
-                    .font(.system(size: 16))
+                    .font(.system(size: 14))
                     .foregroundColor(.black)
-                    .frame(width: 22)
+                    .frame(width: 20)
                 
                 VStack(alignment: .leading, spacing: 2) {
                     Text("Затверджено з")
-                        .font(.system(size: 12))
+                        .font(.system(size: 11))
                         .foregroundColor(.black.opacity(0.5))
                     Text(data.scheduleApprovedSince)
-                        .font(.system(size: 15, weight: .semibold))
+                        .font(.system(size: 14, weight: .semibold))
                         .foregroundColor(.black)
                 }
             }
         }
-        .padding(18)
+        .padding(16)
         .background(
-            RoundedRectangle(cornerRadius: 14)
+            RoundedRectangle(cornerRadius: 12)
                 .fill(Color.white.opacity(0.85))
-                .shadow(color: Color.black.opacity(0.08), radius: 7, x: 0, y: 2)
+                .shadow(color: Color.black.opacity(0.08), radius: 6, x: 0, y: 2)
         )
-        .padding(.horizontal, 18)
+        .padding(.horizontal, 16)
     }
     
     // MARK: - Settings Card
@@ -181,12 +180,12 @@ struct ScheduleView: View {
         VStack(spacing: 0) {
             HStack {
                 Image(systemName: "bell.fill")
-                    .font(.system(size: 16))
+                    .font(.system(size: 14))
                     .foregroundColor(.black)
-                    .frame(width: 22)
+                    .frame(width: 20)
                 
                 Text("Сповіщення")
-                    .font(.system(size: 15))
+                    .font(.system(size: 14))
                     .foregroundColor(.black)
                 
                 Spacer()
@@ -195,19 +194,19 @@ struct ScheduleView: View {
                     .labelsHidden()
                     .tint(Color(hex: "4CAF50"))
             }
-            .padding(18)
+            .padding(16)
             
             Divider()
-                .padding(.leading, 58)
+                .padding(.leading, 52)
             
             HStack {
                 Image(systemName: "arrow.clockwise")
-                    .font(.system(size: 16))
+                    .font(.system(size: 14))
                     .foregroundColor(.black)
-                    .frame(width: 22)
+                    .frame(width: 20)
                 
                 Text("Автооновлення")
-                    .font(.system(size: 15))
+                    .font(.system(size: 14))
                     .foregroundColor(.black)
                 
                 Spacer()
@@ -216,14 +215,14 @@ struct ScheduleView: View {
                     .labelsHidden()
                     .tint(Color(hex: "4CAF50"))
             }
-            .padding(18)
+            .padding(16)
         }
         .background(
-            RoundedRectangle(cornerRadius: 14)
+            RoundedRectangle(cornerRadius: 12)
                 .fill(Color.white.opacity(0.85))
-                .shadow(color: Color.black.opacity(0.08), radius: 7, x: 0, y: 2)
+                .shadow(color: Color.black.opacity(0.08), radius: 6, x: 0, y: 2)
         )
-        .padding(.horizontal, 18)
+        .padding(.horizontal, 16)
     }
     
     // MARK: - Timeline Card
@@ -290,26 +289,26 @@ struct ScheduleView: View {
     
     // MARK: - Shutdowns Section
     private func shutdownsSection(_ data: ScheduleData) -> some View {
-        VStack(alignment: .leading, spacing: 12) {
+        VStack(alignment: .leading, spacing: 10) {
             Text("Відключення")
-                .font(.system(size: 16, weight: .semibold))
+                .font(.system(size: 14, weight: .semibold))
                 .foregroundColor(.black)
-                .padding(.horizontal, 18)
+                .padding(.horizontal, 16)
             
             if data.shutdowns.isEmpty {
                 Text("Сьогодні відключень немає")
-                    .font(.system(size: 14))
+                    .font(.system(size: 13))
                     .foregroundColor(.black.opacity(0.6))
                     .frame(maxWidth: .infinity)
-                    .padding(.vertical, 36)
+                    .padding(.vertical, 32)
                     .background(
-                        RoundedRectangle(cornerRadius: 14)
+                        RoundedRectangle(cornerRadius: 12)
                             .fill(Color.white.opacity(0.85))
-                            .shadow(color: Color.black.opacity(0.08), radius: 7, x: 0, y: 2)
+                            .shadow(color: Color.black.opacity(0.08), radius: 6, x: 0, y: 2)
                     )
-                    .padding(.horizontal, 18)
+                    .padding(.horizontal, 16)
             } else {
-                VStack(spacing: 10) {
+                VStack(spacing: 8) {
                     ForEach(data.shutdowns) { shutdown in
                         shutdownCard(shutdown)
                     }
@@ -320,62 +319,62 @@ struct ScheduleView: View {
     
     // MARK: - Shutdown Card
     private func shutdownCard(_ shutdown: Shutdown) -> some View {
-        HStack(spacing: 14) {
+        HStack(spacing: 12) {
             Image(systemName: "bolt.slash.fill")
-                .font(.system(size: 21))
+                .font(.system(size: 19))
                 .foregroundColor(Color(hex: "FF5252"))
-                .frame(width: 28)
+                .frame(width: 26)
             
             VStack(alignment: .leading, spacing: 3) {
                 Text(shutdown.shutdownHours)
-                    .font(.system(size: 16, weight: .semibold))
+                    .font(.system(size: 15, weight: .semibold))
                     .foregroundColor(.black)
                 
                 let hours = shutdown.durationMinutes / 60
                 let minutes = shutdown.durationMinutes % 60
                 
                 Text("Тривалість: \(hours) год \(minutes) хв")
-                    .font(.system(size: 13))
+                    .font(.system(size: 12))
                     .foregroundColor(.black.opacity(0.6))
             }
             
             Spacer()
         }
-        .padding(14)
+        .padding(12)
         .background(
-            RoundedRectangle(cornerRadius: 11)
+            RoundedRectangle(cornerRadius: 10)
                 .fill(Color.white.opacity(0.85))
-                .shadow(color: Color.black.opacity(0.08), radius: 5, x: 0, y: 2)
+                .shadow(color: Color.black.opacity(0.08), radius: 4, x: 0, y: 2)
         )
-        .padding(.horizontal, 18)
+        .padding(.horizontal, 16)
     }
     
     // MARK: - Total Time Card
     private func totalTimeCard(_ data: ScheduleData) -> some View {
-        HStack(spacing: 14) {
+        HStack(spacing: 12) {
             Image(systemName: "chart.bar.fill")
-                .font(.system(size: 21))
+                .font(.system(size: 19))
                 .foregroundColor(.black)
             
             VStack(alignment: .leading, spacing: 3) {
                 Text("Всього без світла")
-                    .font(.system(size: 13))
+                    .font(.system(size: 12))
                     .foregroundColor(.black.opacity(0.6))
                 
                 Text("\(data.totalHours) год \(data.remainingMinutes) хв")
-                    .font(.system(size: 18, weight: .bold))
+                    .font(.system(size: 16, weight: .bold))
                     .foregroundColor(.black)
             }
             
             Spacer()
         }
-        .padding(18)
+        .padding(16)
         .background(
-            RoundedRectangle(cornerRadius: 14)
+            RoundedRectangle(cornerRadius: 12)
                 .fill(Color.white.opacity(0.85))
-                .shadow(color: Color.black.opacity(0.08), radius: 7, x: 0, y: 2)
+                .shadow(color: Color.black.opacity(0.08), radius: 6, x: 0, y: 2)
         )
-        .padding(.horizontal, 18)
+        .padding(.horizontal, 16)
     }
     
     // MARK: - Error View
