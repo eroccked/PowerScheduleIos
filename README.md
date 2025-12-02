@@ -93,9 +93,9 @@
 ## 👨‍💻 Розробник
 
 Створено **Buhra Taras**
-telegram https://t.me/buhra_t
-email:eroccked@gmail.com
-www.linkedin.com/in/taras-buhra-a9994b168
+- telegram https://t.me/buhra_t
+- email:eroccked@gmail.com
+- www.linkedin.com/in/taras-buhra-a9994b168
 
 Якщо додаток допоміг вам - поділіться з друзями! 💙💛
 
