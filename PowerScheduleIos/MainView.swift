@@ -12,36 +12,68 @@ struct MainView: View {
     @State private var showingAddQueue = false
     @State private var showingSettings = false
     @State private var refreshTrigger = UUID()
+    @State private var contentHeight: CGFloat = 0
+    @State private var screenHeight: CGFloat = 0
+    
+    private var shouldShowFooterButton: Bool {
+        guard viewModel.queues.count > 2 else { return false }
+        return contentHeight > screenHeight - 200
+    }
     
     var body: some View {
         NavigationStack {
-            ZStack {
-                LinearGradient(
-                    colors: [Color(hex: "E3F2FD"), Color(hex: "BBDEFB")],
-                    startPoint: .top,
-                    endPoint: .bottom
-                )
-                .ignoresSafeArea()
-                
-                VStack(spacing: 0) {
-                    headerView
+            GeometryReader { geometry in
+                ZStack {
+                    LinearGradient(
+                        colors: [
+                            Color(hex: "B8E0E8"),
+                            Color(hex: "C0E5DB"),
+                            Color(hex: "C8E6D5")
+                        ],
+                        startPoint: .top,
+                        endPoint: .bottom
+                    )
+                    .ignoresSafeArea()
                     
-                    updateBanner
-                    
-                    ScrollView {
-                        VStack(spacing: 16) {
-                            sectionTitle
-                            
-                            if viewModel.queues.isEmpty {
-                                emptyStateView
-                            } else {
-                                queuesList
+                    VStack(spacing: 0) {
+                        headerView
+                        
+                        ScrollView {
+                            VStack(spacing: 16) {
+                                sectionTitle
+                                
+                                if viewModel.queues.isEmpty {
+                                    emptyStateView
+                                } else {
+                                    queuesList
+                                }
+                                
+                                if !shouldShowFooterButton {
+                                    addQueueSection
+                                }
                             }
-                            
-                            addQueueSection
+                            .padding()
+                            .padding(.bottom, shouldShowFooterButton ? 80 : 0)
+                            .background(
+                                GeometryReader { contentGeo in
+                                    Color.clear.preference(
+                                        key: ContentHeightPreferenceKey.self,
+                                        value: contentGeo.size.height
+                                    )
+                                }
+                            )
                         }
-                        .padding()
+                        
+                        if shouldShowFooterButton {
+                            fixedAddButton
+                        }
                     }
+                    .onAppear {
+                        screenHeight = geometry.size.height
+                    }
+                }
+                .onPreferenceChange(ContentHeightPreferenceKey.self) { height in
+                    contentHeight = height
                 }
             }
             .sheet(isPresented: $showingAddQueue) {
@@ -61,23 +93,23 @@ struct MainView: View {
             .onAppear {
                 viewModel.loadQueues()
             }
+            .onChange(of: viewModel.queues.count) { _ in
+                contentHeight = 0
+            }
         }
     }
     
     // MARK: - Header View
     private var headerView: some View {
-        HStack(alignment: .center, spacing: 12) {
-            Text("💡")
-                .font(.system(size: 36))
-            
+        HStack(alignment: .center, spacing: 10) {
             VStack(alignment: .leading, spacing: 2) {
-                Text("Графік Світла")
-                    .font(.system(size: 20, weight: .bold))
-                    .foregroundColor(.white)
+                Text("Графік світла")
+                    .font(.system(size: 28, weight: .bold))
+                    .foregroundColor(.black)
                 
                 Text("Івано-Франківськ")
-                    .font(.system(size: 12))
-                    .foregroundColor(Color(hex: "BBDEFB"))
+                    .font(.system(size: 13))
+                    .foregroundColor(.black.opacity(0.6))
             }
             
             Spacer()
@@ -85,72 +117,63 @@ struct MainView: View {
             Button(action: {
                 showingSettings = true
             }) {
-                Image(systemName: "gear")
+                Image(systemName: "gearshape.fill")
                     .font(.system(size: 22))
-                    .foregroundColor(.white)
-                    .padding(8)
+                    .foregroundColor(.black)
             }
         }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 12)
-        .background(Color(hex: "1976D2"))
+        .padding(.horizontal, 18)
+        .padding(.top, 6)
+        .padding(.bottom, 10)
     }
     
-    private var updateBanner: some View {
+    // MARK: - Section Title
+    private var sectionTitle: some View {
         HStack {
-            Text("🔄 Автооновлення кожні \(viewModel.updateInterval) хв")
-                .font(.system(size: 14))
-                .foregroundColor(Color(hex: "1565C0"))
-            
+            Text("Мої черги")
+                .font(.system(size: 16, weight: .semibold))
+                .foregroundColor(.black.opacity(0.7))
             Spacer()
             
             Button(action: {
                 viewModel.checkForUpdatesNow()
                 refreshTrigger = UUID()
             }) {
-                Text("Оновити зараз")
-                    .font(.system(size: 12, weight: .semibold))
-                    .foregroundColor(.white)
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 8)
-                    .background(Color(hex: "1976D2"))
-                    .cornerRadius(8)
+                HStack(spacing: 4) {
+                    Image(systemName: "arrow.clockwise")
+                        .font(.system(size: 11))
+                    Text("Оновити")
+                        .font(.system(size: 11))
+                }
+                .foregroundColor(.black.opacity(0.6))
             }
         }
-        .padding()
-        .background(Color(hex: "BBDEFB"))
-    }
-    
-    // MARK: - Section Title
-    private var sectionTitle: some View {
-        HStack {
-            Text("📋 Мої черги:")
-                .font(.system(size: 20, weight: .bold))
-                .foregroundColor(Color(hex: "1976D2"))
-            Spacer()
-        }
+        .padding(.horizontal, 4)
     }
     
     // MARK: - Empty State
     private var emptyStateView: some View {
-        VStack(spacing: 12) {
-            Text("Немає збережених черг")
-                .font(.system(size: 16))
-                .foregroundColor(Color(hex: "9E9E9E"))
+        VStack(spacing: 14) {
+            Image(systemName: "bolt.slash.fill")
+                .font(.system(size: 42))
+                .foregroundColor(.black.opacity(0.3))
             
-            Text("Додайте першу чергу нижче ⬇️")
-                .font(.system(size: 14))
-                .foregroundColor(Color(hex: "9E9E9E"))
+            Text("Немає збережених черг")
+                .font(.system(size: 15, weight: .medium))
+                .foregroundColor(.black.opacity(0.6))
+            
+            Text("Додайте першу чергу нижче")
+                .font(.system(size: 13))
+                .foregroundColor(.black.opacity(0.4))
         }
-        .frame(height: 150)
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 50)
     }
     
     // MARK: - Queues List
     private var queuesList: some View {
         ForEach(viewModel.queues) { queue in
             QueueCard(queue: queue, viewModel: viewModel, refreshTrigger: refreshTrigger)
-                .padding(.horizontal, 16)
-                .padding(.vertical, 4)
         }
     }
     
@@ -161,22 +184,63 @@ struct MainView: View {
         }) {
             HStack {
                 Image(systemName: "plus.circle.fill")
-                    .font(.system(size: 20))
-                Text("ДОДАТИ ЧЕРГУ")
-                    .font(.system(size: 16, weight: .bold))
+                    .font(.system(size: 18))
+                Text("Додати чергу")
+                    .font(.system(size: 15, weight: .semibold))
             }
-            .foregroundColor(.white)
+            .foregroundColor(.black)
             .frame(maxWidth: .infinity)
-            .padding()
-            .background(Color(hex: "4CAF50"))
-            .cornerRadius(12)
+            .padding(.vertical, 14)
+            .background(
+                RoundedRectangle(cornerRadius: 14)
+                    .fill(Color.white.opacity(0.8))
+                    .shadow(color: Color.black.opacity(0.08), radius: 8, x: 0, y: 2)
+            )
         }
         .padding(.horizontal, 16)
-        .padding(.top, 24)
+        .padding(.top, 8)
+    }
+    
+    // MARK: - Fixed Add Button (Footer)
+    private var fixedAddButton: some View {
+        VStack(spacing: 0) {
+            Divider()
+            
+            Button(action: {
+                showingAddQueue = true
+            }) {
+                HStack {
+                    Image(systemName: "plus.circle.fill")
+                        .font(.system(size: 18))
+                    Text("Додати чергу")
+                        .font(.system(size: 15, weight: .semibold))
+                }
+                .foregroundColor(.black)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 14)
+                .background(
+                    RoundedRectangle(cornerRadius: 14)
+                        .fill(Color.white.opacity(0.95))
+                        .shadow(color: Color.black.opacity(0.1), radius: 8, x: 0, y: -2)
+                )
+            }
+            .padding(.horizontal, 18)
+            .padding(.vertical, 12)
+            .background(
+                LinearGradient(
+                    colors: [
+                        Color(hex: "C8E6D5").opacity(0.95),
+                        Color(hex: "C8E6D5")
+                    ],
+                    startPoint: .top,
+                    endPoint: .bottom
+                )
+            )
+        }
     }
 }
 
-// MARK: - Queue Card
+// MARK: - Queue Card (стиль Дія)
 struct QueueCard: View {
     let queue: PowerQueue
     @ObservedObject var viewModel: MainViewModel
@@ -187,6 +251,8 @@ struct QueueCard: View {
     @State private var statusEmoji: String = "⏳"
     @State private var timer: Timer?
     @State private var currentQueue: PowerQueue
+    @State private var isPowerOn: Bool = true
+    @State private var showingMenu = false
     
     init(queue: PowerQueue, viewModel: MainViewModel, refreshTrigger: UUID) {
         self.queue = queue
@@ -199,38 +265,102 @@ struct QueueCard: View {
         Button(action: {
             showingSchedule = true
         }) {
-            VStack(alignment: .leading, spacing: 12) {
-                HStack {
-                    Text("📍 \(queue.name)")
-                        .font(.system(size: 20, weight: .bold))
-                        .foregroundColor(Color(hex: "1976D2"))
-                    Spacer()
-                }
-                
-                HStack {
-                    Text("Черга: \(queue.queueNumber)")
-                        .font(.system(size: 16))
-                        .foregroundColor(Color(hex: "424242"))
-                    
-                    Spacer()
-                    
-                    VStack(alignment: .trailing, spacing: 4) {
-                        Text(statusEmoji)
-                            .font(.system(size: 24))
+            VStack(spacing: 0) {
+                VStack(alignment: .leading, spacing: 14) {
+                    HStack {
+                        Text(queue.name)
+                            .font(.system(size: 21, weight: .bold))
+                            .foregroundColor(.black)
                         
-                        Text(schedulePreview)
-                            .font(.system(size: 12, weight: .medium))
-                            .foregroundColor(Color(hex: "757575"))
-                            .multilineTextAlignment(.trailing)
+                        Spacer()
+                        
+                        Button(action: {
+                            showingMenu = true
+                        }) {
+                            Image(systemName: "ellipsis")
+                                .font(.system(size: 18, weight: .bold))
+                                .foregroundColor(.black)
+                                .rotationEffect(.degrees(90))
+                                .padding(8)
+                        }
+                    }
+                    
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text("Черга:")
+                            .font(.system(size: 13))
+                            .foregroundColor(.black.opacity(0.6))
+                        
+                        Text(queue.queueNumber)
+                            .font(.system(size: 16, weight: .semibold))
+                            .foregroundColor(.black)
+                    }
+                    
+                    HStack(spacing: 10) {
+                        Circle()
+                            .strokeBorder(isPowerOn ? Color(hex: "4CAF50") : Color(hex: "FF5252"), lineWidth: 3.5)
+                            .frame(width: 28, height: 28)
+                        
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(isPowerOn ? "Світло є" : "Відключення")
+                                .font(.system(size: 13, weight: .semibold))
+                                .foregroundColor(.black)
+                            
+                            Text(schedulePreview)
+                                .font(.system(size: 12))
+                                .foregroundColor(.black.opacity(0.6))
+                        }
                     }
                 }
+                .padding(18)
+                
+                HStack {
+                    Text("Оновлено о \(getCurrentTime())")
+                        .font(.system(size: 10))
+                        .foregroundColor(.black.opacity(0.7))
+                    
+                    Spacer()
+                }
+                .padding(.horizontal, 18)
+                .padding(.vertical, 9)
+                .background(Color(hex: "A8E6CF").opacity(0.5))
             }
-            .padding()
-            .background(Color.white)
-            .cornerRadius(12)
-            .shadow(color: Color.black.opacity(0.1), radius: 4, x: 0, y: 2)
+            .background(
+                RoundedRectangle(cornerRadius: 18)
+                    .fill(
+                        LinearGradient(
+                            colors: [
+                                Color(hex: "E8F4F8"),
+                                Color(hex: "E0F2F1")
+                            ],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
+                    .shadow(color: Color.black.opacity(0.1), radius: 8, x: 0, y: 3)
+            )
+            .clipShape(RoundedRectangle(cornerRadius: 18))
         }
         .buttonStyle(PlainButtonStyle())
+        .confirmationDialog("", isPresented: $showingMenu, titleVisibility: .hidden) {
+            Button("Оновити графік") {
+                Task {
+                    await loadPreview()
+                }
+            }
+            
+            // Завжди синхронізуємо стан перед показом
+            let _ = syncQueueStateAndReturn()
+            
+            Button(currentQueue.isNotificationsEnabled ? "Вимкнути сповіщення" : "Увімкнути сповіщення") {
+                toggleNotifications()
+            }
+            
+            Button("Видалити", role: .destructive) {
+                viewModel.deleteQueue(queue)
+            }
+            
+            Button("Скасувати", role: .cancel) {}
+        }
         .contextMenu {
             Button(action: {
                 Task {
@@ -280,6 +410,11 @@ struct QueueCard: View {
         }
     }
     
+    private func syncQueueStateAndReturn() -> Bool {
+        syncQueueState()
+        return true
+    }
+    
     // MARK: - Auto Refresh
     private func startAutoRefresh() {
         stopAutoRefresh()
@@ -300,46 +435,63 @@ struct QueueCard: View {
         do {
             let scheduleData = try await APIService.shared.fetchSchedule(for: queue.queueNumber)
             
+            let isToday = isDateToday(scheduleData.eventDate)
+            
             let currentHour = Calendar.current.component(.hour, from: Date())
-            let isPowerOn = scheduleData.hourlyTimeline[currentHour]
+            isPowerOn = scheduleData.hourlyTimeline[currentHour]
             
             if isPowerOn {
-                statusEmoji = "🟢"
-                
-                // Шукаємо наступне відключення сьогодні
                 if let nextShutdown = scheduleData.shutdowns.first(where: { shutdown in
                     let parts = shutdown.from.split(separator: ":").compactMap { Int($0) }
                     guard parts.count == 2 else { return false }
                     return parts[0] > currentHour
                 }) {
-                    schedulePreview = "Відключення: \(nextShutdown.from)"
+                    schedulePreview = "Відключення о \(nextShutdown.from)"
                 } else {
-                    // Якщо сьогодні немає - шукаємо перше відключення завтра
-                    if let firstShutdownTomorrow = scheduleData.shutdowns.first {
-                        schedulePreview = "Відключення: завтра \(firstShutdownTomorrow.from)"
+                    if let firstShutdown = scheduleData.shutdowns.first {
+                        if isToday {
+                            schedulePreview = "Сьогодні відключень більше немає"
+                        } else {
+                            schedulePreview = "Відключення завтра о \(firstShutdown.from)"
+                        }
                     } else {
-                        schedulePreview = "Світло є"
+                        schedulePreview = "Відключень немає"
                     }
                 }
             } else {
-                statusEmoji = "🔴"
-                
-                // Шукаємо наступне увімкнення сьогодні
                 if let nextPowerOn = findNextPowerOn(timeline: scheduleData.hourlyTimeline, currentHour: currentHour) {
-                    schedulePreview = "Увімкнуть: ~\(nextPowerOn):00"
+                    schedulePreview = "Увімкнуть о ~\(nextPowerOn):00"
                 } else {
-                    // Якщо сьогодні не увімкнуть - шукаємо перше увімкнення завтра
                     if let firstPowerOnHour = scheduleData.hourlyTimeline.firstIndex(where: { $0 == true }) {
-                        schedulePreview = "Увімкнуть: завтра ~\(firstPowerOnHour):00"
+                        if isToday {
+                            schedulePreview = "Сьогодні світло не увімкнуть"
+                        } else {
+                            schedulePreview = "Увімкнуть завтра о ~\(firstPowerOnHour):00"
+                        }
                     } else {
-                        schedulePreview = "Зараз відключення"
+                        schedulePreview = "Поточний стан"
                     }
                 }
             }
         } catch {
-            statusEmoji = "⚠️"
+            isPowerOn = false
             schedulePreview = "Помилка завантаження"
         }
+    }
+    
+    // MARK: - Helper для перевірки дати
+    private func isDateToday(_ dateString: String) -> Bool {
+        // Формат: "02.12.2025"
+        let formatter = DateFormatter()
+        formatter.dateFormat = "dd.MM.yyyy"
+        formatter.locale = Locale(identifier: "uk_UA")
+        
+        guard let eventDate = formatter.date(from: dateString) else {
+            return true
+        }
+        
+        let calendar = Calendar.current
+        return calendar.isDateInToday(eventDate)
     }
     
     private func findNextPowerOn(timeline: [Bool], currentHour: Int) -> Int? {
@@ -359,6 +511,12 @@ struct QueueCard: View {
     private func toggleNotifications() {
         currentQueue.isNotificationsEnabled.toggle()
         viewModel.updateQueue(currentQueue)
+    }
+    
+    private func getCurrentTime() -> String {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "HH:mm"
+        return formatter.string(from: Date())
     }
 }
 
@@ -386,5 +544,14 @@ extension Color {
             blue: Double(b) / 255,
             opacity: Double(a) / 255
         )
+    }
+}
+
+// MARK: - Preference Key для висоти контенту
+struct ContentHeightPreferenceKey: PreferenceKey {
+    static var defaultValue: CGFloat = 0
+    
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
+        value = nextValue()
     }
 }
