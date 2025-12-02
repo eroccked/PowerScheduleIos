@@ -132,7 +132,7 @@ class MainViewModel: ObservableObject {
     }
 }
 
-// MARK: - Add Queue View (Redesign у стилі Дія)
+// MARK: - Add Queue View
 struct AddQueueView: View {
     @Environment(\.dismiss) var dismiss
     @ObservedObject var viewModel: MainViewModel
@@ -234,7 +234,6 @@ struct AddQueueView: View {
                                         Spacer()
                                     }
                                     .padding(.vertical, 12)
-                                    
                                     VStack(spacing: 6) {
                                         Text("Обрана черга:")
                                             .font(.system(size: 13))
@@ -253,28 +252,27 @@ struct AddQueueView: View {
                                 )
                                 .padding(.horizontal, 18)
                             }
-                            
-                            HStack(spacing: 10) {
+                            HStack(spacing: 9) {
                                 Image(systemName: "info.circle.fill")
-                                    .font(.system(size: 16))
+                                    .font(.system(size: 14))
                                     .foregroundColor(.black.opacity(0.4))
                                 
                                 Text("Номер черги можна знайти в квитанції або на сайті вашого електропостачальника")
-                                    .font(.system(size: 12))
+                                    .font(.system(size: 11))
                                     .foregroundColor(.black.opacity(0.6))
                             }
-                            .padding(14)
+                            .padding(12)
                             .background(
-                                RoundedRectangle(cornerRadius: 12)
+                                RoundedRectangle(cornerRadius: 10)
                                     .fill(Color.white.opacity(0.5))
                             )
-                            .padding(.horizontal, 18)
+                            .padding(.horizontal, 16)
                         }
-                        .padding(.bottom, 20)
+                        .padding(.bottom, 18)
                     }
                     
                     Spacer()
-                    
+
                     Button(action: {
                         viewModel.addQueue(name: name, queueNumber: queueNumber)
                         if viewModel.queues.contains(where: { $0.name == name }) {
@@ -282,18 +280,18 @@ struct AddQueueView: View {
                         }
                     }) {
                         Text("Додати чергу")
-                            .font(.system(size: 16, weight: .semibold))
+                            .font(.system(size: 15, weight: .semibold))
                             .foregroundColor(.black)
                             .frame(maxWidth: .infinity)
-                            .padding(.vertical, 14)
+                            .padding(.vertical, 13)
                             .background(
-                                RoundedRectangle(cornerRadius: 14)
+                                RoundedRectangle(cornerRadius: 12)
                                     .fill(Color.white.opacity(0.85))
-                                    .shadow(color: Color.black.opacity(0.1), radius: 8, x: 0, y: 2)
+                                    .shadow(color: Color.black.opacity(0.1), radius: 7, x: 0, y: 2)
                             )
                     }
-                    .padding(.horizontal, 18)
-                    .padding(.bottom, 20)
+                    .padding(.horizontal, 16)
+                    .padding(.bottom, 18)
                 }
             }
             .navigationBarTitleDisplayMode(.inline)
@@ -302,10 +300,11 @@ struct AddQueueView: View {
                     Button(action: {
                         dismiss()
                     }) {
-                        HStack(spacing: 4) {
+                        HStack(spacing: 3) {
                             Image(systemName: "xmark")
-                                .font(.system(size: 14, weight: .semibold))
+                                .font(.system(size: 13, weight: .semibold))
                             Text("Скасувати")
+                                .font(.system(size: 14))
                         }
                         .foregroundColor(.black)
                     }
