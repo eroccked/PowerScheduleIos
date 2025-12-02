@@ -24,8 +24,8 @@ class NotificationService {
         }
     }
     
-    func scheduleShutdownNotifications(shutdowns: [Shutdown], queueName: String) async {
-        cancelAllNotifications()
+    func scheduleShutdownNotifications(shutdowns: [Shutdown], queueName: String, minutesBefore: Int) async {
+        cancelNotifications(for: queueName)
         
         let authorized = await requestAuthorization()
         guard authorized else {
@@ -34,13 +34,16 @@ class NotificationService {
         }
         
         for shutdown in shutdowns {
-            guard let notificationDate = shutdown.notificationDate() else { continue }
+            guard let notificationDate = shutdown.notificationDate(minutesBefore: minutesBefore) else { continue }
             
             guard notificationDate > Date() else { continue }
             
             let content = UNMutableNotificationContent()
             content.title = "⚡ Скоро відключення!"
-            content.body = "\(queueName): відключення о \(shutdown.from) (через 30 хв)"
+            
+            // Формуємо текст в залежності від часу
+            let timeText = formatTimeText(minutes: minutesBefore)
+            content.body = "\(queueName): відключення о \(shutdown.from) (\(timeText))"
             content.sound = .default
             
             let calendar = Calendar.current
@@ -56,7 +59,7 @@ class NotificationService {
             
             do {
                 try await UNUserNotificationCenter.current().add(request)
-                print("✅ Scheduled notification for \(shutdown.from)")
+                print("✅ Scheduled notification for \(shutdown.from) (\(timeText) before)")
             } catch {
                 print("❌ Error scheduling notification: \(error)")
             }
@@ -97,6 +100,21 @@ class NotificationService {
             
             UNUserNotificationCenter.current()
                 .removePendingNotificationRequests(withIdentifiers: identifiersToCancel)
+        }
+    }
+    
+    // MARK: - Helper
+    private func formatTimeText(minutes: Int) -> String {
+        if minutes >= 60 {
+            let hours = minutes / 60
+            let mins = minutes % 60
+            if mins == 0 {
+                return "через \(hours) год"
+            } else {
+                return "через \(hours) год \(mins) хв"
+            }
+        } else {
+            return "через \(minutes) хв"
         }
     }
 }

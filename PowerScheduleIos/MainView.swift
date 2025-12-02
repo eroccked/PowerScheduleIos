@@ -4,6 +4,8 @@
 //
 //  Created by Taras Buhra on 28.11.2025.
 //
+//
+
 import SwiftUI
 
 // MARK: - Main View
@@ -12,38 +14,68 @@ struct MainView: View {
     @State private var showingAddQueue = false
     @State private var showingSettings = false
     @State private var refreshTrigger = UUID()
+    @State private var contentHeight: CGFloat = 0
+    @State private var screenHeight: CGFloat = 0
+    
+    private var shouldShowFooterButton: Bool {
+        guard viewModel.queues.count > 2 else { return false }
+        return contentHeight > screenHeight - 200
+    }
     
     var body: some View {
         NavigationStack {
-            ZStack {
-                LinearGradient(
-                    colors: [
-                        Color(hex: "B8E0E8"),
-                        Color(hex: "C0E5DB"),
-                        Color(hex: "C8E6D5")
-                    ],
-                    startPoint: .top,
-                    endPoint: .bottom
-                )
-                .ignoresSafeArea()
-                
-                VStack(spacing: 0) {
-                    headerView
+            GeometryReader { geometry in
+                ZStack {
+                    LinearGradient(
+                        colors: [
+                            Color(hex: "B8E0E8"),
+                            Color(hex: "C0E5DB"),
+                            Color(hex: "C8E6D5")
+                        ],
+                        startPoint: .top,
+                        endPoint: .bottom
+                    )
+                    .ignoresSafeArea()
                     
-                    ScrollView {
-                        VStack(spacing: 16) {
-                            sectionTitle
-                            
-                            if viewModel.queues.isEmpty {
-                                emptyStateView
-                            } else {
-                                queuesList
+                    VStack(spacing: 0) {
+                        headerView
+                        
+                        ScrollView {
+                            VStack(spacing: 16) {
+                                sectionTitle
+                                
+                                if viewModel.queues.isEmpty {
+                                    emptyStateView
+                                } else {
+                                    queuesList
+                                }
+                                
+                                if !shouldShowFooterButton {
+                                    addQueueSection
+                                }
                             }
-                            
-                            addQueueSection
+                            .padding()
+                            .padding(.bottom, shouldShowFooterButton ? 80 : 0)
+                            .background(
+                                GeometryReader { contentGeo in
+                                    Color.clear.preference(
+                                        key: ContentHeightPreferenceKey.self,
+                                        value: contentGeo.size.height
+                                    )
+                                }
+                            )
                         }
-                        .padding()
+                        
+                        if shouldShowFooterButton {
+                            fixedAddButton
+                        }
                     }
+                    .onAppear {
+                        screenHeight = geometry.size.height
+                    }
+                }
+                .onPreferenceChange(ContentHeightPreferenceKey.self) { height in
+                    contentHeight = height
                 }
             }
             .sheet(isPresented: $showingAddQueue) {
@@ -62,6 +94,9 @@ struct MainView: View {
             }
             .onAppear {
                 viewModel.loadQueues()
+            }
+            .onChange(of: viewModel.queues.count) { _ in
+                contentHeight = 0
             }
         }
     }
@@ -151,20 +186,59 @@ struct MainView: View {
         }) {
             HStack {
                 Image(systemName: "plus.circle.fill")
-                    .font(.system(size: 20))
+                    .font(.system(size: 18))
                 Text("Додати чергу")
-                    .font(.system(size: 16, weight: .semibold))
+                    .font(.system(size: 15, weight: .semibold))
             }
             .foregroundColor(.black)
             .frame(maxWidth: .infinity)
-            .padding()
+            .padding(.vertical, 14)
             .background(
-                RoundedRectangle(cornerRadius: 16)
+                RoundedRectangle(cornerRadius: 14)
                     .fill(Color.white.opacity(0.8))
                     .shadow(color: Color.black.opacity(0.08), radius: 8, x: 0, y: 2)
             )
         }
+        .padding(.horizontal, 16)
         .padding(.top, 8)
+    }
+    
+    // MARK: - Fixed Add Button (Footer)
+    private var fixedAddButton: some View {
+        VStack(spacing: 0) {
+            Divider()
+            
+            Button(action: {
+                showingAddQueue = true
+            }) {
+                HStack {
+                    Image(systemName: "plus.circle.fill")
+                        .font(.system(size: 18))
+                    Text("Додати чергу")
+                        .font(.system(size: 15, weight: .semibold))
+                }
+                .foregroundColor(.black)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 14)
+                .background(
+                    RoundedRectangle(cornerRadius: 14)
+                        .fill(Color.white.opacity(0.95))
+                        .shadow(color: Color.black.opacity(0.1), radius: 8, x: 0, y: -2)
+                )
+            }
+            .padding(.horizontal, 18)
+            .padding(.vertical, 12)
+            .background(
+                LinearGradient(
+                    colors: [
+                        Color(hex: "C8E6D5").opacity(0.95),
+                        Color(hex: "C8E6D5")
+                    ],
+                    startPoint: .top,
+                    endPoint: .bottom
+                )
+            )
+        }
     }
 }
 
@@ -355,6 +429,8 @@ struct QueueCard: View {
         do {
             let scheduleData = try await APIService.shared.fetchSchedule(for: queue.queueNumber)
             
+            let isToday = isDateToday(scheduleData.eventDate)
+            
             let currentHour = Calendar.current.component(.hour, from: Date())
             isPowerOn = scheduleData.hourlyTimeline[currentHour]
             
@@ -366,8 +442,12 @@ struct QueueCard: View {
                 }) {
                     schedulePreview = "Відключення о \(nextShutdown.from)"
                 } else {
-                    if let firstShutdownTomorrow = scheduleData.shutdowns.first {
-                        schedulePreview = "Відключення завтра о \(firstShutdownTomorrow.from)"
+                    if let firstShutdown = scheduleData.shutdowns.first {
+                        if isToday {
+                            schedulePreview = "Сьогодні відключень більше немає"
+                        } else {
+                            schedulePreview = "Відключення завтра о \(firstShutdown.from)"
+                        }
                     } else {
                         schedulePreview = "Відключень немає"
                     }
@@ -377,7 +457,11 @@ struct QueueCard: View {
                     schedulePreview = "Увімкнуть о ~\(nextPowerOn):00"
                 } else {
                     if let firstPowerOnHour = scheduleData.hourlyTimeline.firstIndex(where: { $0 == true }) {
-                        schedulePreview = "Увімкнуть завтра о ~\(firstPowerOnHour):00"
+                        if isToday {
+                            schedulePreview = "Сьогодні світло не увімкнуть"
+                        } else {
+                            schedulePreview = "Увімкнуть завтра о ~\(firstPowerOnHour):00"
+                        }
                     } else {
                         schedulePreview = "Поточний стан"
                     }
@@ -387,6 +471,20 @@ struct QueueCard: View {
             isPowerOn = false
             schedulePreview = "Помилка завантаження"
         }
+    }
+    
+    // MARK: - Helper для перевірки дати
+    private func isDateToday(_ dateString: String) -> Bool {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "dd.MM.yyyy"
+        formatter.locale = Locale(identifier: "uk_UA")
+        
+        guard let eventDate = formatter.date(from: dateString) else {
+            return true 
+        }
+        
+        let calendar = Calendar.current
+        return calendar.isDateInToday(eventDate)
     }
     
     private func findNextPowerOn(timeline: [Bool], currentHour: Int) -> Int? {
@@ -439,5 +537,14 @@ extension Color {
             blue: Double(b) / 255,
             opacity: Double(a) / 255
         )
+    }
+}
+
+// MARK: - Preference Key для висоти контенту
+struct ContentHeightPreferenceKey: PreferenceKey {
+    static var defaultValue: CGFloat = 0
+    
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
+        value = nextValue()
     }
 }
