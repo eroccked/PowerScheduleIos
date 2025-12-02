@@ -20,6 +20,7 @@ struct ScheduleView: View {
     var body: some View {
         NavigationStack {
             ZStack {
+                // Градієнт у стилі Дія
                 LinearGradient(
                     colors: [
                         Color(hex: "B8E0E8"),
@@ -85,11 +86,11 @@ struct ScheduleView: View {
                 HStack {
                     VStack(alignment: .leading, spacing: 4) {
                         Text(queue.name)
-                            .font(.system(size: 24, weight: .bold))
+                            .font(.system(size: 22, weight: .bold))
                             .foregroundColor(.black)
                         
                         Text("Черга \(queue.queueNumber)")
-                            .font(.system(size: 14))
+                            .font(.system(size: 13))
                             .foregroundColor(.black.opacity(0.6))
                     }
                     Spacer()
