@@ -218,15 +218,32 @@ struct SettingsView: View {
                                 .padding(.horizontal, 22)
                             
                             SettingsCard {
-                                Link(destination: URL(string: "https://be-svitlo.oe.if.ua")!) {
-                                    SettingsRow(
-                                        icon: "link",
-                                        title: "Джерело даних",
-                                        subtitle: nil
-                                    ) {
-                                        Image(systemName: "arrow.up.right")
-                                            .font(.system(size: 12))
-                                            .foregroundColor(.black.opacity(0.3))
+                                VStack(spacing: 0) {
+                                    Link(destination: URL(string: "https://be-svitlo.oe.if.ua")!) {
+                                        SettingsRow(
+                                            icon: "link",
+                                            title: "Джерело даних",
+                                            subtitle: nil
+                                        ) {
+                                            Image(systemName: "arrow.up.right")
+                                                .font(.system(size: 12))
+                                                .foregroundColor(.black.opacity(0.3))
+                                        }
+                                    }
+                                    
+                                    Divider()
+                                        .padding(.leading, 54)
+                                    
+                                    Link(destination: URL(string: "https://t.me/buhra_t")!) {
+                                        SettingsRow(
+                                            icon: "paperplane.fill",
+                                            title: "Розробник у Telegram",
+                                            subtitle: nil
+                                        ) {
+                                            Image(systemName: "arrow.up.right")
+                                                .font(.system(size: 12))
+                                                .foregroundColor(.black.opacity(0.3))
+                                        }
                                     }
                                 }
                                 .padding(.vertical, 8)

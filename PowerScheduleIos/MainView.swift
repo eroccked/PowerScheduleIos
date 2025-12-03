@@ -4,7 +4,6 @@
 //
 //  Created by Taras Buhra on 28.11.2025.
 //
-
 import SwiftUI
 
 // MARK: - Main View
@@ -310,6 +309,13 @@ struct QueueCard: View {
                                 .font(.system(size: 12))
                                 .foregroundColor(.black.opacity(0.6))
                         }
+                        
+                        Spacer()
+                        
+                        Image(systemName: currentQueue.isNotificationsEnabled ? "bell.fill" : "bell.slash.fill")
+                            .font(.system(size: 16))
+                            .foregroundColor(.black.opacity(currentQueue.isNotificationsEnabled ? 0.7 : 0.3))
+                            .padding(.trailing, 10)
                     }
                 }
                 .padding(18)
@@ -481,13 +487,12 @@ struct QueueCard: View {
     
     // MARK: - Helper для перевірки дати
     private func isDateToday(_ dateString: String) -> Bool {
-        // Формат: "02.12.2025"
         let formatter = DateFormatter()
         formatter.dateFormat = "dd.MM.yyyy"
         formatter.locale = Locale(identifier: "uk_UA")
         
         guard let eventDate = formatter.date(from: dateString) else {
-            return true 
+            return true
         }
         
         let calendar = Calendar.current
