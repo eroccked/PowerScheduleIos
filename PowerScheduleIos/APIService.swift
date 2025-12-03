@@ -4,7 +4,7 @@
 //
 //  Created by Taras Buhra on 28.11.2025.
 //
-
+//
 import Foundation
 
 // MARK: - API Service
@@ -32,17 +32,111 @@ class APIService {
         let decoder = JSONDecoder()
         let scheduleArray = try decoder.decode([ScheduleResponse].self, from: data)
         
-        guard let scheduleResponse = scheduleArray.first,
-              let shutdowns = scheduleResponse.queues[queueNumber] else {
+        guard !scheduleArray.isEmpty else {
             throw APIError.noData
         }
         
-        return ScheduleData(
-            eventDate: scheduleResponse.eventDate,
-            createdAt: scheduleResponse.createdAt,
-            scheduleApprovedSince: scheduleResponse.scheduleApprovedSince,
-            shutdowns: shutdowns
-        )
+
+        let todaySchedule = findTodaySchedule(in: scheduleArray, queueNumber: queueNumber)
+        let tomorrowSchedule = findTomorrowSchedule(in: scheduleArray, queueNumber: queueNumber)
+        
+
+        if let today = todaySchedule {
+            let hasUpcomingShutdowns = hasUpcomingShutdowns(shutdowns: today.shutdowns)
+            
+            if hasUpcomingShutdowns {
+
+                return today
+            } else if let tomorrow = tomorrowSchedule {
+
+                return tomorrow
+            } else {
+
+                return today
+            }
+        } else if let tomorrow = tomorrowSchedule {
+
+            return tomorrow
+        } else if let first = scheduleArray.first,
+                  let shutdowns = first.queues[queueNumber] {
+
+            return ScheduleData(
+                eventDate: first.eventDate,
+                createdAt: first.createdAt,
+                scheduleApprovedSince: first.scheduleApprovedSince,
+                shutdowns: shutdowns
+            )
+        } else {
+            throw APIError.noData
+        }
+    }
+    
+    // MARK: - Helper: Знайти сьогоднішній графік
+    private func findTodaySchedule(in schedules: [ScheduleResponse], queueNumber: String) -> ScheduleData? {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "dd.MM.yyyy"
+        formatter.locale = Locale(identifier: "uk_UA")
+        
+        let todayString = formatter.string(from: Date())
+        
+        for schedule in schedules {
+            if schedule.eventDate == todayString,
+               let shutdowns = schedule.queues[queueNumber] {
+                return ScheduleData(
+                    eventDate: schedule.eventDate,
+                    createdAt: schedule.createdAt,
+                    scheduleApprovedSince: schedule.scheduleApprovedSince,
+                    shutdowns: shutdowns
+                )
+            }
+        }
+        return nil
+    }
+    
+    // MARK: - Helper: Знайти завтрашній графік
+    private func findTomorrowSchedule(in schedules: [ScheduleResponse], queueNumber: String) -> ScheduleData? {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "dd.MM.yyyy"
+        formatter.locale = Locale(identifier: "uk_UA")
+        
+        guard let tomorrow = Calendar.current.date(byAdding: .day, value: 1, to: Date()) else {
+            return nil
+        }
+        let tomorrowString = formatter.string(from: tomorrow)
+        
+        for schedule in schedules {
+            if schedule.eventDate == tomorrowString,
+               let shutdowns = schedule.queues[queueNumber] {
+                return ScheduleData(
+                    eventDate: schedule.eventDate,
+                    createdAt: schedule.createdAt,
+                    scheduleApprovedSince: schedule.scheduleApprovedSince,
+                    shutdowns: shutdowns
+                )
+            }
+        }
+        return nil
+    }
+    
+    // MARK: - Helper: Чи є майбутні або поточні відключення
+    private func hasUpcomingShutdowns(shutdowns: [Shutdown]) -> Bool {
+        let now = Date()
+        let calendar = Calendar.current
+        let currentHour = calendar.component(.hour, from: now)
+        let currentMinute = calendar.component(.minute, from: now)
+        let currentTotalMinutes = currentHour * 60 + currentMinute
+        
+        for shutdown in shutdowns {
+            let toParts = shutdown.to.split(separator: ":").compactMap { Int($0) }
+            guard toParts.count == 2 else { continue }
+            
+            let toMinutes = toParts[0] * 60 + toParts[1]
+            
+            if toMinutes > currentTotalMinutes {
+                return true
+            }
+        }
+        return false
     }
 }
 

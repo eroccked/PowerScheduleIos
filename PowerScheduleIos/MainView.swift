@@ -4,6 +4,7 @@
 //
 //  Created by Taras Buhra on 28.11.2025.
 //
+//
 import SwiftUI
 
 // MARK: - Main View
@@ -441,36 +442,48 @@ struct QueueCard: View {
         do {
             let scheduleData = try await APIService.shared.fetchSchedule(for: queue.queueNumber)
             
+            // DEBUG
+            print("🔍 DEBUG ===========================")
+            print("📅 eventDate з API: '\(scheduleData.eventDate)'")
+            
+            let formatter = DateFormatter()
+            formatter.dateFormat = "dd.MM.yyyy"
+            formatter.locale = Locale(identifier: "uk_UA")
+            let today = formatter.string(from: Date())
+            print("📅 Сьогоднішня дата: '\(today)'")
+            
             let isToday = isDateToday(scheduleData.eventDate)
+            print("📅 isToday результат: \(isToday)")
+            print("🔍 END DEBUG =======================")
             
-            // Визначаємо чи є світло ЗАРАЗ (з точністю до хвилини)
-            let currentShutdown = findCurrentShutdown(shutdowns: scheduleData.shutdowns)
-            isPowerOn = currentShutdown == nil
-            
-            if isPowerOn {
-                // Світло є - шукаємо наступне відключення
-                if let nextShutdown = findNextShutdown(shutdowns: scheduleData.shutdowns) {
-                    schedulePreview = "Відключення о \(nextShutdown.from)"
-                } else {
-                    if let firstShutdown = scheduleData.shutdowns.first {
-                        if isToday {
-                            schedulePreview = "Сьогодні відключень більше немає"
-                        } else {
-                            schedulePreview = "Відключення завтра о \(firstShutdown.from)"
-                        }
+            if isToday {
+                let currentShutdown = findCurrentShutdown(shutdowns: scheduleData.shutdowns)
+                isPowerOn = currentShutdown == nil
+                
+                if isPowerOn {
+                    if let nextShutdown = findNextShutdown(shutdowns: scheduleData.shutdowns) {
+                        schedulePreview = "Відключення о \(nextShutdown.from)"
                     } else {
-                        schedulePreview = "Відключень немає"
+                        schedulePreview = "Сьогодні відключень більше немає"
+                    }
+                } else {
+                    if let shutdown = currentShutdown {
+                        schedulePreview = "Увімкнуть о \(shutdown.to)"
+                    } else {
+                        schedulePreview = "Світла немає"
                     }
                 }
             } else {
-                // Світла немає - показуємо коли увімкнуть
-                if let shutdown = currentShutdown {
-                    schedulePreview = "Увімкнуть о \(shutdown.to)"
+                isPowerOn = true
+                
+                if let firstShutdown = scheduleData.shutdowns.first {
+                    schedulePreview = "Завтра відключення о \(firstShutdown.from)"
                 } else {
-                    schedulePreview = "Поточний стан"
+                    schedulePreview = "Завтра відключень немає"
                 }
             }
         } catch {
+            print("❌ Помилка: \(error)")
             isPowerOn = false
             schedulePreview = "Помилка завантаження"
         }
@@ -483,14 +496,16 @@ struct QueueCard: View {
         formatter.locale = Locale(identifier: "uk_UA")
         
         guard let eventDate = formatter.date(from: dateString) else {
+            print("⚠️ Не вдалося розпарсити дату: '\(dateString)'")
             return true
         }
         
         let calendar = Calendar.current
-        return calendar.isDateInToday(eventDate)
+        let result = calendar.isDateInToday(eventDate)
+        print("📅 Parsed eventDate: \(eventDate), isToday: \(result)")
+        return result
     }
     
-    // Знаходить поточне відключення (в якому ми зараз знаходимось)
     private func findCurrentShutdown(shutdowns: [Shutdown]) -> Shutdown? {
         let now = Date()
         let calendar = Calendar.current
@@ -514,7 +529,6 @@ struct QueueCard: View {
         return nil
     }
     
-    // Знаходить наступне відключення (яке ще не почалось)
     private func findNextShutdown(shutdowns: [Shutdown]) -> Shutdown? {
         let now = Date()
         let calendar = Calendar.current
@@ -535,14 +549,12 @@ struct QueueCard: View {
         return nil
     }
     
-    // Знаходить час наступного увімкнення світла
     private func findNextPowerOnTime(shutdowns: [Shutdown], currentHour: Int) -> String? {
         let now = Date()
         let calendar = Calendar.current
         let currentMinute = calendar.component(.minute, from: now)
         let currentTotalMinutes = currentHour * 60 + currentMinute
         
-        // Шукаємо найближче відключення яке закінчиться після поточного часу
         for shutdown in shutdowns {
             let toParts = shutdown.to.split(separator: ":").compactMap { Int($0) }
             guard toParts.count == 2 else { continue }
