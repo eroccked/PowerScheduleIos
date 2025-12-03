@@ -443,15 +443,13 @@ struct QueueCard: View {
             
             let isToday = isDateToday(scheduleData.eventDate)
             
-            let currentHour = Calendar.current.component(.hour, from: Date())
-            isPowerOn = scheduleData.hourlyTimeline[currentHour]
+            // Визначаємо чи є світло ЗАРАЗ (з точністю до хвилини)
+            let currentShutdown = findCurrentShutdown(shutdowns: scheduleData.shutdowns)
+            isPowerOn = currentShutdown == nil
             
             if isPowerOn {
-                if let nextShutdown = scheduleData.shutdowns.first(where: { shutdown in
-                    let parts = shutdown.from.split(separator: ":").compactMap { Int($0) }
-                    guard parts.count == 2 else { return false }
-                    return parts[0] > currentHour
-                }) {
+                // Світло є - шукаємо наступне відключення
+                if let nextShutdown = findNextShutdown(shutdowns: scheduleData.shutdowns) {
                     schedulePreview = "Відключення о \(nextShutdown.from)"
                 } else {
                     if let firstShutdown = scheduleData.shutdowns.first {
@@ -465,18 +463,11 @@ struct QueueCard: View {
                     }
                 }
             } else {
-                if let nextPowerOn = findNextPowerOn(timeline: scheduleData.hourlyTimeline, currentHour: currentHour) {
-                    schedulePreview = "Увімкнуть о ~\(nextPowerOn):00"
+                // Світла немає - показуємо коли увімкнуть
+                if let shutdown = currentShutdown {
+                    schedulePreview = "Увімкнуть о \(shutdown.to)"
                 } else {
-                    if let firstPowerOnHour = scheduleData.hourlyTimeline.firstIndex(where: { $0 == true }) {
-                        if isToday {
-                            schedulePreview = "Сьогодні світло не увімкнуть"
-                        } else {
-                            schedulePreview = "Увімкнуть завтра о ~\(firstPowerOnHour):00"
-                        }
-                    } else {
-                        schedulePreview = "Поточний стан"
-                    }
+                    schedulePreview = "Поточний стан"
                 }
             }
         } catch {
@@ -499,15 +490,67 @@ struct QueueCard: View {
         return calendar.isDateInToday(eventDate)
     }
     
-    private func findNextPowerOn(timeline: [Bool], currentHour: Int) -> Int? {
-        for hour in (currentHour + 1)..<24 {
-            if timeline[hour] {
-                return hour
+    // Знаходить поточне відключення (в якому ми зараз знаходимось)
+    private func findCurrentShutdown(shutdowns: [Shutdown]) -> Shutdown? {
+        let now = Date()
+        let calendar = Calendar.current
+        let currentHour = calendar.component(.hour, from: now)
+        let currentMinute = calendar.component(.minute, from: now)
+        let currentTotalMinutes = currentHour * 60 + currentMinute
+        
+        for shutdown in shutdowns {
+            let fromParts = shutdown.from.split(separator: ":").compactMap { Int($0) }
+            let toParts = shutdown.to.split(separator: ":").compactMap { Int($0) }
+            
+            guard fromParts.count == 2, toParts.count == 2 else { continue }
+            
+            let fromMinutes = fromParts[0] * 60 + fromParts[1]
+            let toMinutes = toParts[0] * 60 + toParts[1]
+            
+            if currentTotalMinutes >= fromMinutes && currentTotalMinutes < toMinutes {
+                return shutdown
             }
         }
-        for hour in 0..<currentHour {
-            if timeline[hour] {
-                return hour
+        return nil
+    }
+    
+    // Знаходить наступне відключення (яке ще не почалось)
+    private func findNextShutdown(shutdowns: [Shutdown]) -> Shutdown? {
+        let now = Date()
+        let calendar = Calendar.current
+        let currentHour = calendar.component(.hour, from: now)
+        let currentMinute = calendar.component(.minute, from: now)
+        let currentTotalMinutes = currentHour * 60 + currentMinute
+        
+        for shutdown in shutdowns {
+            let fromParts = shutdown.from.split(separator: ":").compactMap { Int($0) }
+            guard fromParts.count == 2 else { continue }
+            
+            let fromMinutes = fromParts[0] * 60 + fromParts[1]
+            
+            if fromMinutes > currentTotalMinutes {
+                return shutdown
+            }
+        }
+        return nil
+    }
+    
+    // Знаходить час наступного увімкнення світла
+    private func findNextPowerOnTime(shutdowns: [Shutdown], currentHour: Int) -> String? {
+        let now = Date()
+        let calendar = Calendar.current
+        let currentMinute = calendar.component(.minute, from: now)
+        let currentTotalMinutes = currentHour * 60 + currentMinute
+        
+        // Шукаємо найближче відключення яке закінчиться після поточного часу
+        for shutdown in shutdowns {
+            let toParts = shutdown.to.split(separator: ":").compactMap { Int($0) }
+            guard toParts.count == 2 else { continue }
+            
+            let toMinutes = toParts[0] * 60 + toParts[1]
+            
+            if toMinutes > currentTotalMinutes {
+                return shutdown.to
             }
         }
         return nil
