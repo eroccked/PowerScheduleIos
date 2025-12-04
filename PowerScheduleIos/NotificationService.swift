@@ -4,6 +4,7 @@
 //
 //  Created by Taras Buhra on 28.11.2025.
 //
+//
 import Foundation
 import UserNotifications
 
@@ -24,6 +25,53 @@ class NotificationService {
         }
     }
     
+    // MARK: - Schedule Notifications with Change Detection
+    func scheduleShutdownNotificationsWithChangeDetection(
+        for queue: PowerQueue,
+        shutdowns: [Shutdown],
+        minutesBefore: Int
+    ) async {
+        let hasChanges = await checkForScheduleChanges(for: queue)
+        
+        if hasChanges {
+            await showScheduleUpdateNotification(queueName: queue.name)
+        }
+        
+        await scheduleShutdownNotifications(
+            shutdowns: shutdowns,
+            queueName: queue.name,
+            minutesBefore: minutesBefore
+        )
+    }
+    
+    // MARK: - Check for Schedule Changes
+    private func checkForScheduleChanges(for queue: PowerQueue) async -> Bool {
+        do {
+            let scheduleData = try await APIService.shared.fetchSchedule(for: queue.queueNumber)
+            
+            guard let jsonData = try? JSONEncoder().encode(scheduleData),
+                  let jsonString = String(data: jsonData, encoding: .utf8) else {
+                return false
+            }
+            
+            let savedJSON = StorageService.shared.loadScheduleJSON(for: queue.id)
+            
+            if let saved = savedJSON, saved != jsonString {
+                StorageService.shared.saveScheduleJSON(jsonString, for: queue.id)
+                print("📊 Виявлено зміни в графіку для \(queue.name)")
+                return true
+            } else if savedJSON == nil {
+                StorageService.shared.saveScheduleJSON(jsonString, for: queue.id)
+            }
+            
+            return false
+        } catch {
+            print("❌ Помилка перевірки змін: \(error)")
+            return false
+        }
+    }
+    
+    // MARK: - Schedule Shutdown Notifications
     func scheduleShutdownNotifications(shutdowns: [Shutdown], queueName: String, minutesBefore: Int) async {
         cancelNotifications(for: queueName)
         
@@ -46,7 +94,7 @@ class NotificationService {
             content.sound = .default
             
             let calendar = Calendar.current
-            let components = calendar.dateComponents([.hour, .minute], from: notificationDate)
+            let components = calendar.dateComponents([.year, .month, .day, .hour, .minute], from: notificationDate)
             let trigger = UNCalendarNotificationTrigger(dateMatching: components, repeats: false)
             
             let identifier = "shutdown_\(shutdown.from)_\(queueName)"
@@ -65,6 +113,7 @@ class NotificationService {
         }
     }
     
+    // MARK: - Show Schedule Update Notification
     func showScheduleUpdateNotification(queueName: String) async {
         let authorized = await requestAuthorization()
         guard authorized else { return }
@@ -77,16 +126,18 @@ class NotificationService {
         let request = UNNotificationRequest(
             identifier: "schedule_update_\(UUID().uuidString)",
             content: content,
-            trigger: nil
+            trigger: nil 
         )
         
         do {
             try await UNUserNotificationCenter.current().add(request)
+            print("📊 Сповіщення про зміну графіка надіслано для \(queueName)")
         } catch {
             print("Error showing update notification: \(error)")
         }
     }
     
+    // MARK: - Cancel Notifications
     func cancelAllNotifications() {
         UNUserNotificationCenter.current().removeAllPendingNotificationRequests()
     }

@@ -17,7 +17,7 @@ class ScheduleViewModel: ObservableObject {
         didSet {
             updateQueueSettings()
             if notificationsEnabled {
-                scheduleNotifications()
+                scheduleNotificationsWithChangeCheck()
             } else {
                 cancelNotifications()
             }
@@ -52,7 +52,7 @@ class ScheduleViewModel: ObservableObject {
                 isLoading = false
                 
                 if notificationsEnabled {
-                    scheduleNotifications()
+                    scheduleNotificationsWithChangeCheck()
                 }
             } catch {
                 errorMessage = error.localizedDescription
@@ -69,21 +69,22 @@ class ScheduleViewModel: ObservableObject {
         storageService.updateQueue(updatedQueue)
     }
     
-    // MARK: - Notifications
-    private func scheduleNotifications() {
+    // MARK: - Schedule Notifications with Change Detection
+    private func scheduleNotificationsWithChangeCheck() {
         guard let shutdowns = scheduleData?.shutdowns else { return }
         
         Task {
             let minutesBefore = storageService.loadNotificationMinutes()
             
-            await notificationService.scheduleShutdownNotifications(
+            await notificationService.scheduleShutdownNotificationsWithChangeDetection(
+                for: queue,
                 shutdowns: shutdowns,
-                queueName: queue.name,
                 minutesBefore: minutesBefore
             )
         }
     }
     
+    // MARK: - Cancel Notifications
     private func cancelNotifications() {
         notificationService.cancelNotifications(for: queue.name)
     }
