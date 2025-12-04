@@ -18,6 +18,7 @@ class MainViewModel: ObservableObject {
     
     private let storageService = StorageService.shared
     private let apiService = APIService.shared
+    private let notificationService = NotificationService.shared
     
     init() {
         loadQueues()
@@ -94,7 +95,8 @@ class MainViewModel: ObservableObject {
                     storageService.saveScheduleJSON(jsonString, for: queue.id)
                     
                     if savedJSON != nil {
-                        await showUpdateNotification(for: queue)
+                        await notificationService.showScheduleUpdateNotification(queueName: queue.name)
+                        print("📊 Сповіщення надіслано для \(queue.name)")
                     }
                 }
             }
@@ -118,11 +120,6 @@ class MainViewModel: ObservableObject {
         let regex = try? NSRegularExpression(pattern: pattern)
         let range = NSRange(location: 0, length: queue.utf16.count)
         return regex?.firstMatch(in: queue, range: range) != nil
-    }
-    
-    // MARK: - Notifications
-    private func showUpdateNotification(for queue: PowerQueue) async {
-        print("📊 Графік оновлено для \(queue.name)")
     }
     
     // MARK: - Alerts
