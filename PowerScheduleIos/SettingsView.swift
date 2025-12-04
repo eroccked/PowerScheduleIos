@@ -419,16 +419,7 @@ class SettingsViewModel: ObservableObject {
                     
                     if let jsonData = try? JSONEncoder().encode(scheduleData),
                        let jsonString = String(data: jsonData, encoding: .utf8) {
-                        
-                        let savedJSON = storageService.loadScheduleJSON(for: queue.id)
-                        
-                        if savedJSON != jsonString {
-                            storageService.saveScheduleJSON(jsonString, for: queue.id)
-                            
-                            if savedJSON != nil {
-                                await NotificationService.shared.showScheduleUpdateNotification(queueName: queue.name)
-                            }
-                        }
+                        storageService.saveScheduleJSON(jsonString, for: queue.id)
                     }
                 } catch {
                     print("Error updating \(queue.name): \(error)")

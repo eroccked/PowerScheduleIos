@@ -18,7 +18,6 @@ class MainViewModel: ObservableObject {
     
     private let storageService = StorageService.shared
     private let apiService = APIService.shared
-    private let notificationService = NotificationService.shared
     
     init() {
         loadQueues()
@@ -88,17 +87,7 @@ class MainViewModel: ObservableObject {
             
             if let jsonData = try? JSONEncoder().encode(scheduleData),
                let jsonString = String(data: jsonData, encoding: .utf8) {
-                
-                let savedJSON = storageService.loadScheduleJSON(for: queue.id)
-                
-                if savedJSON != jsonString {
-                    storageService.saveScheduleJSON(jsonString, for: queue.id)
-                    
-                    if savedJSON != nil {
-                        await notificationService.showScheduleUpdateNotification(queueName: queue.name)
-                        print("📊 Сповіщення надіслано для \(queue.name)")
-                    }
-                }
+                storageService.saveScheduleJSON(jsonString, for: queue.id)
             }
         } catch {
             print("Error checking queue \(queue.name): \(error)")

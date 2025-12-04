@@ -4,6 +4,7 @@
 //
 //  Created by Taras Buhra on 28.11.2025.
 //
+//
 import SwiftUI
 import BackgroundTasks
 import UserNotifications
@@ -96,8 +97,6 @@ extension AppDelegate: UNUserNotificationCenterDelegate {
 }
 
 // MARK: - Background Update Operation
-import BackgroundTasks
-
 class BackgroundUpdateOperation: Operation {
     override func main() {
         guard !isCancelled else { return }
@@ -106,6 +105,7 @@ class BackgroundUpdateOperation: Operation {
         
         Task {
             let queues = StorageService.shared.loadQueues()
+            let minutesBefore = StorageService.shared.loadNotificationMinutes()
             
             for queue in queues where queue.isAutoUpdateEnabled {
                 do {
@@ -116,12 +116,21 @@ class BackgroundUpdateOperation: Operation {
                         
                         let savedJSON = StorageService.shared.loadScheduleJSON(for: queue.id)
                         
-                        if savedJSON != jsonString {
+                        let hasChanges = savedJSON != nil && savedJSON != jsonString
+                        
+                        if hasChanges {
                             StorageService.shared.saveScheduleJSON(jsonString, for: queue.id)
+                            await NotificationService.shared.showScheduleUpdateNotification(queueName: queue.name)
                             
-                            if savedJSON != nil {
-                                await NotificationService.shared.showScheduleUpdateNotification(queueName: queue.name)
+                            if queue.isNotificationsEnabled {
+                                await NotificationService.shared.scheduleShutdownNotifications(
+                                    shutdowns: scheduleData.shutdowns,
+                                    queueName: queue.name,
+                                    minutesBefore: minutesBefore
+                                )
                             }
+                        } else if savedJSON == nil {
+                            StorageService.shared.saveScheduleJSON(jsonString, for: queue.id)
                         }
                     }
                 } catch {

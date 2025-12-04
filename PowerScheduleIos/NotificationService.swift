@@ -25,15 +25,16 @@ class NotificationService {
         }
     }
     
-    // MARK: - Schedule Notifications with Change Detection
+    // MARK: - Schedule Notifications with Change Detection (for Background)
     func scheduleShutdownNotificationsWithChangeDetection(
         for queue: PowerQueue,
         shutdowns: [Shutdown],
-        minutesBefore: Int
+        minutesBefore: Int,
+        showChangeNotification: Bool = false
     ) async {
         let hasChanges = await checkForScheduleChanges(for: queue)
         
-        if hasChanges {
+        if hasChanges && showChangeNotification {
             await showScheduleUpdateNotification(queueName: queue.name)
         }
         
@@ -45,7 +46,7 @@ class NotificationService {
     }
     
     // MARK: - Check for Schedule Changes
-    private func checkForScheduleChanges(for queue: PowerQueue) async -> Bool {
+    func checkForScheduleChanges(for queue: PowerQueue) async -> Bool {
         do {
             let scheduleData = try await APIService.shared.fetchSchedule(for: queue.queueNumber)
             
@@ -126,7 +127,7 @@ class NotificationService {
         let request = UNNotificationRequest(
             identifier: "schedule_update_\(UUID().uuidString)",
             content: content,
-            trigger: nil 
+            trigger: nil
         )
         
         do {
