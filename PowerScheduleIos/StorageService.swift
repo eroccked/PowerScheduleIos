@@ -69,6 +69,7 @@ class StorageService {
     
     func saveScheduleJSON(_ json: String, for queueId: UUID) {
         sharedDefaults.set(json, forKey: "schedule_\(queueId.uuidString)")
+        WidgetCenter.shared.reloadAllTimelines()
     }
     
     func loadScheduleJSON(for queueId: UUID) -> String? {
