@@ -83,17 +83,25 @@ struct ScheduleView: View {
     private func scheduleContent(_ data: ScheduleData) -> some View {
         ScrollView {
             VStack(spacing: 20) {
-                HStack {
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text(queue.name)
-                            .font(.system(size: 20, weight: .bold))
-                            .foregroundColor(.black)
-                        
-                        Text("Черга \(queue.queueNumber)")
-                            .font(.system(size: 12))
-                            .foregroundColor(.black.opacity(0.6))
+                // Шапка з назвою та перемикачем днів
+                VStack(spacing: 12) {
+                    HStack {
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text(queue.name)
+                                .font(.system(size: 20, weight: .bold))
+                                .foregroundColor(.black)
+                            
+                            Text("Черга \(queue.queueNumber)")
+                                .font(.system(size: 12))
+                                .foregroundColor(.black.opacity(0.6))
+                        }
+                        Spacer()
                     }
-                    Spacer()
+                    
+                    // Перемикач днів (якщо є більше одного дня)
+                    if viewModel.showDayPicker {
+                        dayPickerSegment
+                    }
                 }
                 .padding(.horizontal, 16)
                 .padding(.top, 4)
@@ -101,11 +109,6 @@ struct ScheduleView: View {
                 infoCard(data)
                 
                 settingsCard
-                
-                // Перемикач днів (якщо є більше одного дня)
-                if viewModel.showDayPicker {
-                    dayPickerCard
-                }
                 
                 timelineCard(data)
                 
@@ -117,67 +120,37 @@ struct ScheduleView: View {
         }
     }
     
-    // MARK: - Day Picker Card
-    private var dayPickerCard: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("Оберіть день")
-                .font(.system(size: 14, weight: .semibold))
-                .foregroundColor(.black)
-            
-            HStack(spacing: 8) {
-                ForEach(viewModel.availableDays) { day in
-                    dayButton(day)
+    // MARK: - Day Picker Segment (компактний стиль Дія)
+    private var dayPickerSegment: some View {
+        HStack(spacing: 0) {
+            ForEach(viewModel.availableDays) { day in
+                Button(action: {
+                    withAnimation(.easeInOut(duration: 0.15)) {
+                        viewModel.selectedDay = day
+                    }
+                }) {
+                    Text(day.rawValue)
+                        .font(.system(size: 13, weight: .medium))
+                        .foregroundColor(viewModel.selectedDay == day ? .black : .black.opacity(0.5))
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 8)
+                        .background(
+                            Group {
+                                if viewModel.selectedDay == day {
+                                    RoundedRectangle(cornerRadius: 8)
+                                        .fill(Color.white)
+                                        .shadow(color: Color.black.opacity(0.08), radius: 2, x: 0, y: 1)
+                                }
+                            }
+                        )
                 }
             }
         }
-        .padding(16)
+        .padding(3)
         .background(
-            RoundedRectangle(cornerRadius: 14)
-                .fill(Color.white.opacity(0.85))
-                .shadow(color: Color.black.opacity(0.08), radius: 7, x: 0, y: 2)
+            RoundedRectangle(cornerRadius: 10)
+                .fill(Color.black.opacity(0.06))
         )
-        .padding(.horizontal, 16)
-    }
-    
-    // MARK: - Day Button
-    private func dayButton(_ day: DayOption) -> some View {
-        Button(action: {
-            withAnimation(.easeInOut(duration: 0.2)) {
-                viewModel.selectedDay = day
-            }
-        }) {
-            VStack(spacing: 4) {
-                Text(day.rawValue)
-                    .font(.system(size: 14, weight: viewModel.selectedDay == day ? .bold : .medium))
-                    .foregroundColor(viewModel.selectedDay == day ? .white : .black)
-                
-                if let schedule = scheduleForDay(day) {
-                    Text(schedule.eventDate)
-                        .font(.system(size: 10))
-                        .foregroundColor(viewModel.selectedDay == day ? .white.opacity(0.8) : .black.opacity(0.5))
-                }
-            }
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, 12)
-            .background(
-                RoundedRectangle(cornerRadius: 10)
-                    .fill(viewModel.selectedDay == day ? Color(hex: "4CAF50") : Color.white.opacity(0.6))
-            )
-        }
-    }
-    
-    // MARK: - Helper: Get Schedule for Day
-    private func scheduleForDay(_ day: DayOption) -> ScheduleData? {
-        guard let all = viewModel.allSchedules else { return nil }
-        
-        switch day {
-        case .yesterday:
-            return all.yesterday
-        case .today:
-            return all.today
-        case .tomorrow:
-            return all.tomorrow
-        }
     }
     
     // MARK: - Info Card
@@ -249,18 +222,6 @@ struct ScheduleView: View {
                 .shadow(color: Color.black.opacity(0.08), radius: 6, x: 0, y: 2)
         )
         .padding(.horizontal, 16)
-    }
-    
-    // MARK: - Day Badge Color
-    private func dayBadgeColor(_ day: DayOption) -> Color {
-        switch day {
-        case .yesterday:
-            return Color.gray
-        case .today:
-            return Color(hex: "4CAF50")
-        case .tomorrow:
-            return Color(hex: "2196F3")
-        }
     }
     
     // MARK: - Settings Card
