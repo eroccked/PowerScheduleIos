@@ -4,6 +4,7 @@
 //
 //  Created by Taras Buhra on 28.11.2025.
 //
+//
 import SwiftUI
 
 // MARK: - Schedule View
@@ -101,7 +102,7 @@ struct ScheduleView: View {
                 
                 settingsCard
                 
-                // Перемикач днів 
+                // Перемикач днів (якщо є більше одного дня)
                 if viewModel.showDayPicker {
                     dayPickerCard
                 }
@@ -198,16 +199,9 @@ struct ScheduleView: View {
                             .font(.system(size: 14, weight: .semibold))
                             .foregroundColor(.black)
                         
-                        // Бейдж з назвою дня
-                        Text(viewModel.selectedDay.rawValue)
-                            .font(.system(size: 10, weight: .semibold))
-                            .foregroundColor(.white)
-                            .padding(.horizontal, 8)
-                            .padding(.vertical, 3)
-                            .background(
-                                Capsule()
-                                    .fill(dayBadgeColor(viewModel.selectedDay))
-                            )
+                        Text("(\(viewModel.selectedDay.rawValue))")
+                            .font(.system(size: 12, weight: .medium))
+                            .foregroundColor(.black.opacity(0.5))
                     }
                 }
             }
