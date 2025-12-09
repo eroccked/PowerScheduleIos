@@ -40,7 +40,7 @@ struct ScheduleView: View {
                             .font(.system(size: 16))
                             .foregroundColor(.black.opacity(0.6))
                     }
-                } else if let scheduleData = viewModel.scheduleData {
+                } else if let scheduleData = viewModel.currentSchedule {
                     scheduleContent(scheduleData)
                 } else if viewModel.errorMessage != nil {
                     errorView
@@ -101,6 +101,11 @@ struct ScheduleView: View {
                 
                 settingsCard
                 
+                // Перемикач днів 
+                if viewModel.showDayPicker {
+                    dayPickerCard
+                }
+                
                 timelineCard(data)
                 
                 shutdownsSection(data)
@@ -108,6 +113,69 @@ struct ScheduleView: View {
                 totalTimeCard(data)
             }
             .padding(.bottom, 40)
+        }
+    }
+    
+    // MARK: - Day Picker Card
+    private var dayPickerCard: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Оберіть день")
+                .font(.system(size: 14, weight: .semibold))
+                .foregroundColor(.black)
+            
+            HStack(spacing: 8) {
+                ForEach(viewModel.availableDays) { day in
+                    dayButton(day)
+                }
+            }
+        }
+        .padding(16)
+        .background(
+            RoundedRectangle(cornerRadius: 14)
+                .fill(Color.white.opacity(0.85))
+                .shadow(color: Color.black.opacity(0.08), radius: 7, x: 0, y: 2)
+        )
+        .padding(.horizontal, 16)
+    }
+    
+    // MARK: - Day Button
+    private func dayButton(_ day: DayOption) -> some View {
+        Button(action: {
+            withAnimation(.easeInOut(duration: 0.2)) {
+                viewModel.selectedDay = day
+            }
+        }) {
+            VStack(spacing: 4) {
+                Text(day.rawValue)
+                    .font(.system(size: 14, weight: viewModel.selectedDay == day ? .bold : .medium))
+                    .foregroundColor(viewModel.selectedDay == day ? .white : .black)
+                
+                if let schedule = scheduleForDay(day) {
+                    Text(schedule.eventDate)
+                        .font(.system(size: 10))
+                        .foregroundColor(viewModel.selectedDay == day ? .white.opacity(0.8) : .black.opacity(0.5))
+                }
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 12)
+            .background(
+                RoundedRectangle(cornerRadius: 10)
+                    .fill(viewModel.selectedDay == day ? Color(hex: "4CAF50") : Color.white.opacity(0.6))
+            )
+        }
+    }
+    
+    // MARK: - Helper: Get Schedule for Day
+    private func scheduleForDay(_ day: DayOption) -> ScheduleData? {
+        guard let all = viewModel.allSchedules else { return nil }
+        
+        switch day {
+        case .yesterday:
+            return all.yesterday
+        case .today:
+            return all.today
+        case .tomorrow:
+            return all.tomorrow
         }
     }
     
@@ -124,9 +192,23 @@ struct ScheduleView: View {
                     Text("Дата")
                         .font(.system(size: 11))
                         .foregroundColor(.black.opacity(0.5))
-                    Text(data.eventDate)
-                        .font(.system(size: 14, weight: .semibold))
-                        .foregroundColor(.black)
+                    
+                    HStack(spacing: 6) {
+                        Text(data.eventDate)
+                            .font(.system(size: 14, weight: .semibold))
+                            .foregroundColor(.black)
+                        
+                        // Бейдж з назвою дня
+                        Text(viewModel.selectedDay.rawValue)
+                            .font(.system(size: 10, weight: .semibold))
+                            .foregroundColor(.white)
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 3)
+                            .background(
+                                Capsule()
+                                    .fill(dayBadgeColor(viewModel.selectedDay))
+                            )
+                    }
                 }
             }
             
@@ -173,6 +255,18 @@ struct ScheduleView: View {
                 .shadow(color: Color.black.opacity(0.08), radius: 6, x: 0, y: 2)
         )
         .padding(.horizontal, 16)
+    }
+    
+    // MARK: - Day Badge Color
+    private func dayBadgeColor(_ day: DayOption) -> Color {
+        switch day {
+        case .yesterday:
+            return Color.gray
+        case .today:
+            return Color(hex: "4CAF50")
+        case .tomorrow:
+            return Color(hex: "2196F3")
+        }
     }
     
     // MARK: - Settings Card
@@ -228,9 +322,18 @@ struct ScheduleView: View {
     // MARK: - Timeline Card
     private func timelineCard(_ data: ScheduleData) -> some View {
         VStack(alignment: .leading, spacing: 14) {
-            Text("Візуалізація доби")
-                .font(.system(size: 16, weight: .semibold))
-                .foregroundColor(.black)
+            HStack {
+                Text("Візуалізація доби")
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundColor(.black)
+                
+                Spacer()
+                
+                // Показуємо який день
+                Text(viewModel.selectedDay.rawValue)
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundColor(.black.opacity(0.5))
+            }
             
             HStack {
                 Text("0")
@@ -290,13 +393,21 @@ struct ScheduleView: View {
     // MARK: - Shutdowns Section
     private func shutdownsSection(_ data: ScheduleData) -> some View {
         VStack(alignment: .leading, spacing: 10) {
-            Text("Відключення")
-                .font(.system(size: 14, weight: .semibold))
-                .foregroundColor(.black)
-                .padding(.horizontal, 16)
+            HStack {
+                Text("Відключення")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundColor(.black)
+                
+                Spacer()
+                
+                Text(viewModel.selectedDay.rawValue)
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundColor(.black.opacity(0.5))
+            }
+            .padding(.horizontal, 16)
             
             if data.shutdowns.isEmpty {
-                Text("Сьогодні відключень немає")
+                Text(emptyShutdownsText)
                     .font(.system(size: 13))
                     .foregroundColor(.black.opacity(0.6))
                     .frame(maxWidth: .infinity)
@@ -314,6 +425,18 @@ struct ScheduleView: View {
                     }
                 }
             }
+        }
+    }
+    
+    // MARK: - Empty Shutdowns Text
+    private var emptyShutdownsText: String {
+        switch viewModel.selectedDay {
+        case .yesterday:
+            return "Вчора відключень не було"
+        case .today:
+            return "Сьогодні відключень немає"
+        case .tomorrow:
+            return "Завтра відключень немає"
         }
     }
     
@@ -357,7 +480,7 @@ struct ScheduleView: View {
                 .foregroundColor(.black)
             
             VStack(alignment: .leading, spacing: 3) {
-                Text("Всього без світла")
+                Text("Всього без світла (\(viewModel.selectedDay.rawValue.lowercased()))")
                     .font(.system(size: 12))
                     .foregroundColor(.black.opacity(0.6))
                 
