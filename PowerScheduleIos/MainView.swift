@@ -442,19 +442,7 @@ struct QueueCard: View {
         do {
             let scheduleData = try await APIService.shared.fetchSchedule(for: queue.queueNumber)
             
-            // DEBUG
-            print("🔍 DEBUG ===========================")
-            print("📅 eventDate з API: '\(scheduleData.eventDate)'")
-            
-            let formatter = DateFormatter()
-            formatter.dateFormat = "dd.MM.yyyy"
-            formatter.locale = Locale(identifier: "uk_UA")
-            let today = formatter.string(from: Date())
-            print("📅 Сьогоднішня дата: '\(today)'")
-            
             let isToday = isDateToday(scheduleData.eventDate)
-            print("📅 isToday результат: \(isToday)")
-            print("🔍 END DEBUG =======================")
             
             if isToday {
                 let currentShutdown = findCurrentShutdown(shutdowns: scheduleData.shutdowns)
@@ -483,9 +471,9 @@ struct QueueCard: View {
                 }
             }
         } catch {
-            print("❌ Помилка: \(error)")
-            isPowerOn = false
-            schedulePreview = "Помилка завантаження"
+            // При помилці — "Даних немає" + світло є
+            isPowerOn = true
+            schedulePreview = "Даних немає"
         }
     }
     
@@ -496,14 +484,11 @@ struct QueueCard: View {
         formatter.locale = Locale(identifier: "uk_UA")
         
         guard let eventDate = formatter.date(from: dateString) else {
-            print("⚠️ Не вдалося розпарсити дату: '\(dateString)'")
             return true
         }
         
         let calendar = Calendar.current
-        let result = calendar.isDateInToday(eventDate)
-        print("📅 Parsed eventDate: \(eventDate), isToday: \(result)")
-        return result
+        return calendar.isDateInToday(eventDate)
     }
     
     private func findCurrentShutdown(shutdowns: [Shutdown]) -> Shutdown? {
@@ -544,25 +529,6 @@ struct QueueCard: View {
             
             if fromMinutes > currentTotalMinutes {
                 return shutdown
-            }
-        }
-        return nil
-    }
-    
-    private func findNextPowerOnTime(shutdowns: [Shutdown], currentHour: Int) -> String? {
-        let now = Date()
-        let calendar = Calendar.current
-        let currentMinute = calendar.component(.minute, from: now)
-        let currentTotalMinutes = currentHour * 60 + currentMinute
-        
-        for shutdown in shutdowns {
-            let toParts = shutdown.to.split(separator: ":").compactMap { Int($0) }
-            guard toParts.count == 2 else { continue }
-            
-            let toMinutes = toParts[0] * 60 + toParts[1]
-            
-            if toMinutes > currentTotalMinutes {
-                return shutdown.to
             }
         }
         return nil

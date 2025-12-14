@@ -196,12 +196,13 @@ struct PowerScheduleProvider: AppIntentTimelineProvider {
                 isPlaceholder: false
             )
         } catch {
+            // При помилці — "Даних немає" + світло є
             return Entry(
                 date: Date(),
                 queueName: queue.name,
                 queueNumber: queue.queueNumber,
-                isPowerOn: false,
-                statusText: "Помилка завантаження",
+                isPowerOn: true,
+                statusText: "Даних немає",
                 updatedAt: updatedAt,
                 isPlaceholder: false
             )
@@ -475,7 +476,7 @@ struct WidgetAPIService {
     }
 }
 
-// MARK: - Preview
+//// MARK: - Preview
 //#Preview(as: .systemMedium) {
 //    PowerScheduleWidget()
 //} timeline: {
