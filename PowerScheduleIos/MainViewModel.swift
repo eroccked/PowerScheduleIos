@@ -36,11 +36,6 @@ class MainViewModel: ObservableObject {
     
     // MARK: - Add Queue
     func addQueue(name: String, queueNumber: String) {
-        guard !name.isEmpty else {
-            showErrorAlert("❌ Введіть назву!")
-            return
-        }
-        
         guard !queueNumber.isEmpty else {
             showErrorAlert("❌ Введіть чергу!")
             return
@@ -51,8 +46,11 @@ class MainViewModel: ObservableObject {
             return
         }
         
+        // Якщо назва пуста — використовуємо номер черги
+        let queueName = name.isEmpty ? "Черга \(queueNumber)" : name
+        
         let newQueue = PowerQueue(
-            name: name,
+            name: queueName,
             queueNumber: queueNumber
         )
         
@@ -72,7 +70,7 @@ class MainViewModel: ObservableObject {
         loadQueues()
     }
     
-    // MARK: - Check for Updates
+    // MARK: - Check for Updates (без сповіщень - ми в UI)
     func checkForUpdatesNow() {
         Task {
             for queue in queues where queue.isAutoUpdateEnabled {
@@ -162,7 +160,7 @@ struct AddQueueView: View {
                     ScrollView {
                         VStack(spacing: 16) {
                             VStack(alignment: .leading, spacing: 8) {
-                                Text("Назва")
+                                Text("Назва (необов'язково)")
                                     .font(.system(size: 13, weight: .semibold))
                                     .foregroundColor(.black.opacity(0.6))
                                     .padding(.horizontal, 22)
@@ -263,7 +261,8 @@ struct AddQueueView: View {
                     
                     Button(action: {
                         viewModel.addQueue(name: name, queueNumber: queueNumber)
-                        if viewModel.queues.contains(where: { $0.name == name }) {
+                        let expectedName = name.isEmpty ? "Черга \(queueNumber)" : name
+                        if viewModel.queues.contains(where: { $0.name == expectedName }) {
                             dismiss()
                         }
                     }) {
