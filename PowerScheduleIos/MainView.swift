@@ -252,7 +252,7 @@ struct QueueCard: View {
     @State private var statusEmoji: String = "⏳"
     @State private var timer: Timer?
     @State private var currentQueue: PowerQueue
-    @State private var isPowerOn: Bool = true
+    @State private var powerStatus: PowerStatus = .unknown
     @State private var showingMenu = false
     
     init(queue: PowerQueue, viewModel: MainViewModel, refreshTrigger: UUID) {
@@ -260,6 +260,30 @@ struct QueueCard: View {
         self.viewModel = viewModel
         self.refreshTrigger = refreshTrigger
         _currentQueue = State(initialValue: queue)
+    }
+    
+    // Колір кружка залежно від статусу
+    private var statusColor: Color {
+        switch powerStatus {
+        case .on:
+            return Color(hex: "4CAF50") // зелений
+        case .off:
+            return Color(hex: "FF5252") // червоний
+        case .unknown:
+            return Color(hex: "FFC107") // жовтий
+        }
+    }
+    
+    // Текст статусу
+    private var statusText: String {
+        switch powerStatus {
+        case .on:
+            return "Світло є"
+        case .off:
+            return "Відключення"
+        case .unknown:
+            return "Інформація відсутня"
+        }
     }
     
     var body: some View {
@@ -298,11 +322,11 @@ struct QueueCard: View {
                     
                     HStack(spacing: 10) {
                         Circle()
-                            .strokeBorder(isPowerOn ? Color(hex: "4CAF50") : Color(hex: "FF5252"), lineWidth: 3.5)
+                            .strokeBorder(statusColor, lineWidth: 3.5)
                             .frame(width: 28, height: 28)
                         
                         VStack(alignment: .leading, spacing: 2) {
-                            Text(isPowerOn ? "Світло є" : "Відключення")
+                            Text(statusText)
                                 .font(.system(size: 13, weight: .semibold))
                                 .foregroundColor(.black)
                             
@@ -446,15 +470,16 @@ struct QueueCard: View {
             
             if isToday {
                 let currentShutdown = findCurrentShutdown(shutdowns: scheduleData.shutdowns)
-                isPowerOn = currentShutdown == nil
                 
-                if isPowerOn {
+                if currentShutdown == nil {
+                    powerStatus = .on
                     if let nextShutdown = findNextShutdown(shutdowns: scheduleData.shutdowns) {
                         schedulePreview = "Відключення о \(nextShutdown.from)"
                     } else {
                         schedulePreview = "Сьогодні відключень більше немає"
                     }
                 } else {
+                    powerStatus = .off
                     if let shutdown = currentShutdown {
                         schedulePreview = "Увімкнуть о \(shutdown.to)"
                     } else {
@@ -462,7 +487,7 @@ struct QueueCard: View {
                     }
                 }
             } else {
-                isPowerOn = true
+                powerStatus = .on
                 
                 if let firstShutdown = scheduleData.shutdowns.first {
                     schedulePreview = "Завтра відключення о \(firstShutdown.from)"
@@ -471,9 +496,9 @@ struct QueueCard: View {
                 }
             }
         } catch {
-            // При помилці — "Даних немає" + світло є
-            isPowerOn = true
-            schedulePreview = "Даних немає"
+            // При помилці — жовтий статус "Інформація відсутня"
+            powerStatus = .unknown
+            schedulePreview = "Дані недоступні"
         }
     }
     
@@ -580,4 +605,11 @@ struct ContentHeightPreferenceKey: PreferenceKey {
     static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
         value = nextValue()
     }
+}
+
+// MARK: - Power Status Enum
+enum PowerStatus {
+    case on      // зелений - світло є
+    case off     // червоний - відключення
+    case unknown // жовтий - інформація відсутня
 }

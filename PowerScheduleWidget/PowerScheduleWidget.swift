@@ -5,6 +5,7 @@
 //  Created by Taras Buhra on 03.12.2025.
 //
 //
+
 import WidgetKit
 import SwiftUI
 import AppIntents
@@ -66,12 +67,19 @@ struct SelectQueueIntent: WidgetConfigurationIntent {
     var queue: QueueEntity?
 }
 
+// MARK: - Widget Power Status
+enum WidgetPowerStatus: String {
+    case on      // зелений
+    case off     // червоний
+    case unknown // жовтий
+}
+
 // MARK: - Timeline Entry
 struct PowerScheduleEntry: TimelineEntry {
     let date: Date
     let queueName: String
     let queueNumber: String
-    let isPowerOn: Bool
+    let powerStatus: WidgetPowerStatus
     let statusText: String
     let updatedAt: String
     let isPlaceholder: Bool
@@ -81,7 +89,7 @@ struct PowerScheduleEntry: TimelineEntry {
             date: Date(),
             queueName: "Дім",
             queueNumber: "5.2",
-            isPowerOn: true,
+            powerStatus: .on,
             statusText: "Сьогодні відключень більше немає",
             updatedAt: "16:35",
             isPlaceholder: true
@@ -93,7 +101,7 @@ struct PowerScheduleEntry: TimelineEntry {
             date: Date(),
             queueName: "Немає черг",
             queueNumber: "-",
-            isPowerOn: true,
+            powerStatus: .unknown,
             statusText: "Додайте чергу в додатку",
             updatedAt: "--:--",
             isPlaceholder: false
@@ -157,19 +165,20 @@ struct PowerScheduleProvider: AppIntentTimelineProvider {
             let isToday = isDateToday(scheduleData.eventDate)
             
             let statusText: String
-            let isPowerOn: Bool
+            let powerStatus: WidgetPowerStatus
             
             if isToday {
                 let currentShutdown = findCurrentShutdown(shutdowns: scheduleData.shutdowns)
-                isPowerOn = currentShutdown == nil
                 
-                if isPowerOn {
+                if currentShutdown == nil {
+                    powerStatus = .on
                     if let nextShutdown = findNextShutdown(shutdowns: scheduleData.shutdowns) {
                         statusText = "Відключення о \(nextShutdown.from)"
                     } else {
                         statusText = "Сьогодні відключень більше немає"
                     }
                 } else {
+                    powerStatus = .off
                     if let shutdown = currentShutdown {
                         statusText = "Увімкнуть о \(shutdown.to)"
                     } else {
@@ -177,7 +186,7 @@ struct PowerScheduleProvider: AppIntentTimelineProvider {
                     }
                 }
             } else {
-                isPowerOn = true
+                powerStatus = .on
                 
                 if let firstShutdown = scheduleData.shutdowns.first {
                     statusText = "Завтра відключення о \(firstShutdown.from)"
@@ -190,19 +199,19 @@ struct PowerScheduleProvider: AppIntentTimelineProvider {
                 date: Date(),
                 queueName: queue.name,
                 queueNumber: queue.queueNumber,
-                isPowerOn: isPowerOn,
+                powerStatus: powerStatus,
                 statusText: statusText,
                 updatedAt: updatedAt,
                 isPlaceholder: false
             )
         } catch {
-            // При помилці — "Даних немає" + світло є
+            // При помилці — жовтий статус "Інформація відсутня"
             return Entry(
                 date: Date(),
                 queueName: queue.name,
                 queueNumber: queue.queueNumber,
-                isPowerOn: true,
-                statusText: "Даних немає",
+                powerStatus: .unknown,
+                statusText: "Дані недоступні",
                 updatedAt: updatedAt,
                 isPlaceholder: false
             )
@@ -269,6 +278,30 @@ struct PowerScheduleProvider: AppIntentTimelineProvider {
 struct PowerScheduleWidgetView: View {
     var entry: PowerScheduleEntry
     
+    // Колір кружка залежно від статусу
+    private var statusColor: Color {
+        switch entry.powerStatus {
+        case .on:
+            return Color.green
+        case .off:
+            return Color.red
+        case .unknown:
+            return Color.yellow
+        }
+    }
+    
+    // Текст статусу
+    private var statusTitle: String {
+        switch entry.powerStatus {
+        case .on:
+            return "Світло є"
+        case .off:
+            return "Світла немає"
+        case .unknown:
+            return "Інформація відсутня"
+        }
+    }
+    
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             Text(entry.queueName)
@@ -287,11 +320,11 @@ struct PowerScheduleWidgetView: View {
             
             HStack(spacing: 10) {
                 Circle()
-                    .stroke(entry.isPowerOn ? Color.green : Color.red, lineWidth: 4)
+                    .stroke(statusColor, lineWidth: 4)
                     .frame(width: 32, height: 32)
                 
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(entry.isPowerOn ? "Світло є" : "Світла немає")
+                    Text(statusTitle)
                         .font(.system(size: 15, weight: .semibold))
                         .foregroundColor(.black)
                     
@@ -476,7 +509,7 @@ struct WidgetAPIService {
     }
 }
 
-//// MARK: - Preview
+// MARK: - Preview
 //#Preview(as: .systemMedium) {
 //    PowerScheduleWidget()
 //} timeline: {
