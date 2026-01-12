@@ -43,7 +43,6 @@ struct ScheduleResponse: Codable {
 
 // MARK: - Shutdown Model
 struct Shutdown: Codable, Identifiable, Hashable {
-    // FIX: Використовуємо стабільний ID на основі часу, а не UUID(), що генерується щоразу
     var id: String { "\(from)-\(to)" }
     
     let from: String
@@ -59,7 +58,6 @@ struct Shutdown: Codable, Identifiable, Hashable {
         let fromMinutes = fromParts[0] * 60 + fromParts[1]
         let toMinutes = toParts[0] * 60 + toParts[1]
         
-        // Обробка переходу через північ
         if toMinutes < fromMinutes {
             return (toMinutes + 1440) - fromMinutes
         }
@@ -67,15 +65,25 @@ struct Shutdown: Codable, Identifiable, Hashable {
         return toMinutes - fromMinutes
     }
     
-    func notificationDate(minutesBefore: Int) -> Date? {
-        let parts = from.split(separator: ":").compactMap { Int($0) }
-        guard parts.count == 2 else { return nil }
+    func notificationDate(minutesBefore: Int, eventDate: String) -> Date? {
+        let timeParts = from.split(separator: ":").compactMap { Int($0) }
+        guard timeParts.count == 2 else { return nil }
         
-        var components = Calendar.current.dateComponents([.year, .month, .day], from: Date())
-        components.hour = parts[0]
-        components.minute = parts[1]
+        // Парсимо дату графіка
+        let dateFormatter = DateFormatter()
+        dateFormatter.dateFormat = "dd.MM.yyyy"
+        dateFormatter.locale = Locale(identifier: "uk_UA")
+        
+        guard let scheduleDate = dateFormatter.date(from: eventDate) else { return nil }
+        
+        // Створюємо компоненти з дати графіка + час відключення
+        var components = Calendar.current.dateComponents([.year, .month, .day], from: scheduleDate)
+        components.hour = timeParts[0]
+        components.minute = timeParts[1]
         
         guard let date = Calendar.current.date(from: components) else { return nil }
+        
+        // Віднімаємо хвилини для сповіщення
         return Calendar.current.date(byAdding: .minute, value: -minutesBefore, to: date)
     }
 }
@@ -111,11 +119,8 @@ struct ScheduleData: Codable {
             let fromHour = fromParts[0]
             let toHour = toParts[0]
             
-            // FIX CRASH: Перевірка на валідність годин
             guard fromHour >= 0 && fromHour < 24 else { continue }
             
-            // Логіка: Якщо toHour менше fromHour (перехід через ніч) або більше 24,
-            // малюємо червоним до кінця доби (24).
             let safeEndHour: Int
             if toHour <= fromHour {
                 safeEndHour = 24
@@ -123,7 +128,6 @@ struct ScheduleData: Codable {
                 safeEndHour = min(toHour, 24)
             }
             
-            // Тепер діапазон завжди валідний (наприклад 23..<24)
             for hour in fromHour..<safeEndHour {
                 if hour >= 0 && hour < 24 {
                     timeline[hour] = false

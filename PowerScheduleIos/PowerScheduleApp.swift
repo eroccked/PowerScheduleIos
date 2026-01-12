@@ -126,7 +126,8 @@ class BackgroundUpdateOperation: Operation {
                                 await NotificationService.shared.scheduleShutdownNotifications(
                                     shutdowns: scheduleData.shutdowns,
                                     queueName: queue.name,
-                                    minutesBefore: minutesBefore
+                                    minutesBefore: minutesBefore,
+                                    eventDate: scheduleData.eventDate
                                 )
                             }
                         } else if savedJSON == nil {

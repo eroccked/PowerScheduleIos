@@ -30,6 +30,7 @@ class NotificationService {
         for queue: PowerQueue,
         shutdowns: [Shutdown],
         minutesBefore: Int,
+        eventDate: String,
         showChangeNotification: Bool = false
     ) async {
         let hasChanges = await checkForScheduleChanges(for: queue)
@@ -41,7 +42,8 @@ class NotificationService {
         await scheduleShutdownNotifications(
             shutdowns: shutdowns,
             queueName: queue.name,
-            minutesBefore: minutesBefore
+            minutesBefore: minutesBefore,
+            eventDate: eventDate
         )
     }
     
@@ -73,7 +75,13 @@ class NotificationService {
     }
     
     // MARK: - Schedule Shutdown Notifications
-    func scheduleShutdownNotifications(shutdowns: [Shutdown], queueName: String, minutesBefore: Int) async {
+    /// Планує сповіщення для відключень
+    /// - Parameters:
+    ///   - shutdowns: масив відключень
+    ///   - queueName: назва черги
+    ///   - minutesBefore: за скільки хвилин попереджати
+    ///   - eventDate: дата графіка (формат "dd.MM.yyyy") - ВАЖЛИВО для правильної дати сповіщення
+    func scheduleShutdownNotifications(shutdowns: [Shutdown], queueName: String, minutesBefore: Int, eventDate: String) async {
         cancelNotifications(for: queueName)
         
         let authorized = await requestAuthorization()
@@ -83,8 +91,10 @@ class NotificationService {
         }
         
         for shutdown in shutdowns {
-            guard let notificationDate = shutdown.notificationDate(minutesBefore: minutesBefore) else { continue }
+            // Передаємо eventDate щоб сповіщення було на правильну дату
+            guard let notificationDate = shutdown.notificationDate(minutesBefore: minutesBefore, eventDate: eventDate) else { continue }
             
+            // Перевіряємо що дата в майбутньому
             guard notificationDate > Date() else { continue }
             
             let content = UNMutableNotificationContent()
@@ -98,7 +108,8 @@ class NotificationService {
             let components = calendar.dateComponents([.year, .month, .day, .hour, .minute], from: notificationDate)
             let trigger = UNCalendarNotificationTrigger(dateMatching: components, repeats: false)
             
-            let identifier = "shutdown_\(shutdown.from)_\(queueName)"
+            // Додаємо дату в ідентифікатор для унікальності
+            let identifier = "shutdown_\(eventDate)_\(shutdown.from)_\(queueName)"
             let request = UNNotificationRequest(
                 identifier: identifier,
                 content: content,
@@ -107,7 +118,7 @@ class NotificationService {
             
             do {
                 try await UNUserNotificationCenter.current().add(request)
-                print("✅ Scheduled notification for \(shutdown.from) (\(timeText) before)")
+                print("✅ Scheduled notification for \(eventDate) \(shutdown.from) (\(timeText) before)")
             } catch {
                 print("❌ Error scheduling notification: \(error)")
             }

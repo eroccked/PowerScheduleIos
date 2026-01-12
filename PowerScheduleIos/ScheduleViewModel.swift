@@ -4,6 +4,7 @@
 //
 //  Created by Taras Buhra on 28.11.2025.
 //
+
 import Foundation
 import SwiftUI
 
@@ -99,7 +100,6 @@ class ScheduleViewModel: ObservableObject {
         else if all.tomorrow != nil {
             selectedDay = .tomorrow
         }
-        // Інакше показуємо що є
         else if all.today != nil {
             selectedDay = .today
         }
@@ -151,6 +151,7 @@ class ScheduleViewModel: ObservableObject {
                 for: queue,
                 shutdowns: schedule.shutdowns,
                 minutesBefore: minutesBefore,
+                eventDate: schedule.eventDate,
                 showChangeNotification: false
             )
         }
