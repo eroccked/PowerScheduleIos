@@ -160,39 +160,63 @@ struct PowerScheduleProvider: AppIntentTimelineProvider {
         let updatedAt = timeFormatter.string(from: Date())
         
         do {
-            let scheduleData = try await WidgetAPIService.fetchSchedule(for: queue.queueNumber)
-            
-            let isToday = isDateToday(scheduleData.eventDate)
+            // Завантажуємо всі графіки (сьогодні і завтра)
+            let allSchedules = try await WidgetAPIService.fetchAllSchedules(for: queue.queueNumber)
             
             let statusText: String
             let powerStatus: WidgetPowerStatus
             
-            if isToday {
-                let currentShutdown = findCurrentShutdown(shutdowns: scheduleData.shutdowns)
+            // Спочатку перевіряємо сьогоднішній графік
+            if let todaySchedule = allSchedules.today {
+                let currentShutdown = findCurrentShutdown(shutdowns: todaySchedule.shutdowns)
                 
-                if currentShutdown == nil {
-                    powerStatus = .on
-                    if let nextShutdown = findNextShutdown(shutdowns: scheduleData.shutdowns) {
-                        statusText = "Відключення о \(nextShutdown.from)"
-                    } else {
-                        statusText = "Сьогодні відключень більше немає"
-                    }
-                } else {
+                if let shutdown = currentShutdown {
+                    // Зараз є відключення
                     powerStatus = .off
-                    if let shutdown = currentShutdown {
-                        statusText = "Увімкнуть о \(shutdown.to)"
-                    } else {
-                        statusText = "Світла немає"
-                    }
+                    statusText = "Увімкнуть о \(shutdown.to)"
+                    
+                    return Entry(
+                        date: Date(),
+                        queueName: queue.name,
+                        queueNumber: queue.queueNumber,
+                        powerStatus: powerStatus,
+                        statusText: statusText,
+                        updatedAt: updatedAt,
+                        isPlaceholder: false
+                    )
                 }
-            } else {
-                powerStatus = .on
                 
-                if let firstShutdown = scheduleData.shutdowns.first {
+                // Перевіряємо чи є ще відключення сьогодні
+                if let nextShutdown = findNextShutdown(shutdowns: todaySchedule.shutdowns) {
+                    powerStatus = .on
+                    statusText = "Відключення о \(nextShutdown.from)"
+                    
+                    return Entry(
+                        date: Date(),
+                        queueName: queue.name,
+                        queueNumber: queue.queueNumber,
+                        powerStatus: powerStatus,
+                        statusText: statusText,
+                        updatedAt: updatedAt,
+                        isPlaceholder: false
+                    )
+                }
+            }
+            
+            // Якщо сьогодні відключень немає/більше немає — дивимось на завтра
+            if let tomorrowSchedule = allSchedules.tomorrow {
+                powerStatus = .on
+                if let firstShutdown = tomorrowSchedule.shutdowns.first {
                     statusText = "Завтра відключення о \(firstShutdown.from)"
                 } else {
                     statusText = "Завтра відключень немає"
                 }
+            } else if allSchedules.today != nil {
+                powerStatus = .on
+                statusText = "Сьогодні відключень більше немає"
+            } else {
+                powerStatus = .unknown
+                statusText = "Дані недоступні"
             }
             
             return Entry(
@@ -218,18 +242,6 @@ struct PowerScheduleProvider: AppIntentTimelineProvider {
         }
     }
     
-    private func isDateToday(_ dateString: String) -> Bool {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "dd.MM.yyyy"
-        formatter.locale = Locale(identifier: "uk_UA")
-        
-        guard let eventDate = formatter.date(from: dateString) else {
-            return true
-        }
-        
-        return Calendar.current.isDateInToday(eventDate)
-    }
-    
     private func findCurrentShutdown(shutdowns: [WidgetShutdown]) -> WidgetShutdown? {
         let now = Date()
         let calendar = Calendar.current
@@ -244,7 +256,12 @@ struct PowerScheduleProvider: AppIntentTimelineProvider {
             guard fromParts.count == 2, toParts.count == 2 else { continue }
             
             let fromMinutes = fromParts[0] * 60 + fromParts[1]
-            let toMinutes = toParts[0] * 60 + toParts[1]
+            var toMinutes = toParts[0] * 60 + toParts[1]
+            
+            // Обробка переходу через північ (наприклад 20:30 - 00:00)
+            if toMinutes <= fromMinutes {
+                toMinutes += 24 * 60 // Додаємо 24 години
+            }
             
             if currentTotalMinutes >= fromMinutes && currentTotalMinutes < toMinutes {
                 return shutdown
@@ -415,6 +432,33 @@ struct WidgetScheduleData: Codable {
 struct WidgetAPIService {
     private static let baseURL = "https://be-svitlo.oe.if.ua"
     
+    // Структура для всіх графіків
+    struct AllWidgetSchedules {
+        let today: WidgetScheduleData?
+        let tomorrow: WidgetScheduleData?
+    }
+    
+    // Завантажує всі доступні графіки (сьогодні і завтра)
+    static func fetchAllSchedules(for queueNumber: String) async throws -> AllWidgetSchedules {
+        let urlString = "\(baseURL)/schedule-by-queue?queue=\(queueNumber)"
+        
+        guard let url = URL(string: urlString) else {
+            throw URLError(.badURL)
+        }
+        
+        let (data, _) = try await URLSession.shared.data(from: url)
+        let scheduleArray = try JSONDecoder().decode([WidgetScheduleResponse].self, from: data)
+        
+        guard !scheduleArray.isEmpty else {
+            throw URLError(.cannotParseResponse)
+        }
+        
+        let todaySchedule = findTodaySchedule(in: scheduleArray, queueNumber: queueNumber)
+        let tomorrowSchedule = findTomorrowSchedule(in: scheduleArray, queueNumber: queueNumber)
+        
+        return AllWidgetSchedules(today: todaySchedule, tomorrow: tomorrowSchedule)
+    }
+    
     static func fetchSchedule(for queueNumber: String) async throws -> WidgetScheduleData {
         let urlString = "\(baseURL)/schedule-by-queue?queue=\(queueNumber)"
         
@@ -510,8 +554,8 @@ struct WidgetAPIService {
 }
 
 // MARK: - Preview
-//#Preview(as: .systemMedium) {
-//    PowerScheduleWidget()
-//} timeline: {
-//    PowerScheduleEntry.placeholder
-//}
+#Preview(as: .systemMedium) {
+    PowerScheduleWidget()
+} timeline: {
+    PowerScheduleEntry.placeholder
+}

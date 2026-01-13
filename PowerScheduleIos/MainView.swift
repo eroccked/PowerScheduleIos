@@ -5,6 +5,7 @@
 //  Created by Taras Buhra on 28.11.2025.
 //
 //
+
 import SwiftUI
 
 // MARK: - Main View
@@ -464,56 +465,50 @@ struct QueueCard: View {
     
     private func loadPreview() async {
         do {
-            let scheduleData = try await APIService.shared.fetchSchedule(for: queue.queueNumber)
+            // Завантажуємо всі графіки (вчора, сьогодні, завтра)
+            let allSchedules = try await APIService.shared.fetchAllSchedules(for: queue.queueNumber)
             
-            let isToday = isDateToday(scheduleData.eventDate)
-            
-            if isToday {
-                let currentShutdown = findCurrentShutdown(shutdowns: scheduleData.shutdowns)
+            // Спочатку перевіряємо сьогоднішній графік
+            if let todaySchedule = allSchedules.today {
+                let currentShutdown = findCurrentShutdown(shutdowns: todaySchedule.shutdowns)
                 
-                if currentShutdown == nil {
-                    powerStatus = .on
-                    if let nextShutdown = findNextShutdown(shutdowns: scheduleData.shutdowns) {
-                        schedulePreview = "Відключення о \(nextShutdown.from)"
-                    } else {
-                        schedulePreview = "Сьогодні відключень більше немає"
-                    }
-                } else {
+                if let shutdown = currentShutdown {
+                    // Зараз є відключення
                     powerStatus = .off
-                    if let shutdown = currentShutdown {
-                        schedulePreview = "Увімкнуть о \(shutdown.to)"
-                    } else {
-                        schedulePreview = "Світла немає"
-                    }
+                    schedulePreview = "Увімкнуть о \(shutdown.to)"
+                    return
                 }
-            } else {
-                powerStatus = .on
                 
-                if let firstShutdown = scheduleData.shutdowns.first {
+                // Перевіряємо чи є ще відключення сьогодні
+                if let nextShutdown = findNextShutdown(shutdowns: todaySchedule.shutdowns) {
+                    powerStatus = .on
+                    schedulePreview = "Відключення о \(nextShutdown.from)"
+                    return
+                }
+            }
+            
+            // Якщо сьогодні відключень немає/більше немає — дивимось на завтра
+            if let tomorrowSchedule = allSchedules.tomorrow {
+                powerStatus = .on
+                if let firstShutdown = tomorrowSchedule.shutdowns.first {
                     schedulePreview = "Завтра відключення о \(firstShutdown.from)"
                 } else {
                     schedulePreview = "Завтра відключень немає"
                 }
+            } else if allSchedules.today != nil {
+                // Є тільки сьогоднішній графік, і відключень більше немає
+                powerStatus = .on
+                schedulePreview = "Сьогодні відключень більше немає"
+            } else {
+                // Немає даних
+                powerStatus = .unknown
+                schedulePreview = "Дані недоступні"
             }
         } catch {
             // При помилці — жовтий статус "Інформація відсутня"
             powerStatus = .unknown
             schedulePreview = "Дані недоступні"
         }
-    }
-    
-    // MARK: - Helper для перевірки дати
-    private func isDateToday(_ dateString: String) -> Bool {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "dd.MM.yyyy"
-        formatter.locale = Locale(identifier: "uk_UA")
-        
-        guard let eventDate = formatter.date(from: dateString) else {
-            return true
-        }
-        
-        let calendar = Calendar.current
-        return calendar.isDateInToday(eventDate)
     }
     
     private func findCurrentShutdown(shutdowns: [Shutdown]) -> Shutdown? {
@@ -530,7 +525,12 @@ struct QueueCard: View {
             guard fromParts.count == 2, toParts.count == 2 else { continue }
             
             let fromMinutes = fromParts[0] * 60 + fromParts[1]
-            let toMinutes = toParts[0] * 60 + toParts[1]
+            var toMinutes = toParts[0] * 60 + toParts[1]
+            
+            // Обробка переходу через північ (наприклад 20:30 - 00:00)
+            if toMinutes <= fromMinutes {
+                toMinutes += 24 * 60 // Додаємо 24 години
+            }
             
             if currentTotalMinutes >= fromMinutes && currentTotalMinutes < toMinutes {
                 return shutdown
