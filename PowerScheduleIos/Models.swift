@@ -5,6 +5,7 @@
 //  Created by Taras Buhra on 28.11.2025.
 //
 //
+
 import Foundation
 
 // MARK: - PowerQueue Model
@@ -65,6 +66,11 @@ struct Shutdown: Codable, Identifiable, Hashable {
         return toMinutes - fromMinutes
     }
     
+    /// Розраховує дату сповіщення на основі дати графіка (eventDate)
+    /// - Parameters:
+    ///   - minutesBefore: за скільки хвилин до відключення сповіщувати
+    ///   - eventDate: дата графіка у форматі "dd.MM.yyyy"
+    /// - Returns: точна дата і час для сповіщення
     func notificationDate(minutesBefore: Int, eventDate: String) -> Date? {
         let timeParts = from.split(separator: ":").compactMap { Int($0) }
         guard timeParts.count == 2 else { return nil }
@@ -118,16 +124,24 @@ struct ScheduleData: Codable {
             
             let fromHour = fromParts[0]
             let toHour = toParts[0]
+            let toMinute = toParts[1]
             
             guard fromHour >= 0 && fromHour < 24 else { continue }
             
             let safeEndHour: Int
-            if toHour <= fromHour {
+
+            if toHour < fromHour {
                 safeEndHour = 24
-            } else {
-                safeEndHour = min(toHour, 24)
             }
-            
+            else if toHour == fromHour && toMinute > 0 {
+                safeEndHour = toHour + 1
+            }
+            else if toHour == fromHour && toMinute == 0 && fromHour > 0 {
+                safeEndHour = 24
+            }
+            else {
+                safeEndHour = toMinute > 0 ? min(toHour + 1, 24) : min(toHour, 24)
+            }
             for hour in fromHour..<safeEndHour {
                 if hour >= 0 && hour < 24 {
                     timeline[hour] = false

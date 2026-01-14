@@ -445,7 +445,7 @@
 				CLANG_ENABLE_MODULES = YES;
 				CODE_SIGN_ENTITLEMENTS = PowerScheduleWidgetExtension.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 2;
+				CURRENT_PROJECT_VERSION = 3;
 				DEVELOPMENT_TEAM = 5C4JAUP34Y;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = PowerScheduleWidget/Info.plist;
@@ -475,7 +475,7 @@
 				CLANG_ENABLE_MODULES = YES;
 				CODE_SIGN_ENTITLEMENTS = PowerScheduleWidgetExtension.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 2;
+				CURRENT_PROJECT_VERSION = 3;
 				DEVELOPMENT_TEAM = 5C4JAUP34Y;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = PowerScheduleWidget/Info.plist;
