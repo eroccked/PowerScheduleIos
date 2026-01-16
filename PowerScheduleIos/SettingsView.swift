@@ -4,6 +4,7 @@
 //
 //  Created by Taras Buhra on 28.11.2025.
 //
+
 import SwiftUI
 
 // MARK: - Settings View
@@ -47,7 +48,7 @@ struct SettingsView: View {
                                         Text("Графік Світла")
                                             .font(.system(size: 16, weight: .semibold))
                                             .foregroundColor(.black)
-                                        Text("Версія 1.0.0")
+                                        Text("Версія 1.5.0")
                                             .font(.system(size: 13))
                                             .foregroundColor(.black.opacity(0.5))
                                     }
@@ -131,6 +132,19 @@ struct SettingsView: View {
                                                     .font(.system(size: 14, weight: .semibold))
                                                     .foregroundColor(.black.opacity(0.3))
                                             }
+                                        }
+                                        
+                                        Divider()
+                                            .padding(.leading, 60)
+                                        
+                                        SettingsRow(
+                                            icon: "calendar.badge.plus",
+                                            title: "Нові графіки на завтра",
+                                            subtitle: viewModel.newScheduleNotificationEnabled ? "Сповіщати" : "Вимкнено"
+                                        ) {
+                                            Toggle("", isOn: $viewModel.newScheduleNotificationEnabled)
+                                                .labelsHidden()
+                                                .tint(Color(hex: "4CAF50"))
                                         }
                                     }
                                     
@@ -364,6 +378,11 @@ class SettingsViewModel: ObservableObject {
         }
     }
     @Published var notificationsEnabled = false
+    @Published var newScheduleNotificationEnabled: Bool = false {
+        didSet {
+            StorageService.shared.saveNewScheduleNotificationEnabled(newScheduleNotificationEnabled)
+        }
+    }
     @Published var totalQueues = 0
     @Published var activeQueues = 0
     @Published var showDeleteAllAlert = false
@@ -386,6 +405,7 @@ class SettingsViewModel: ObservableObject {
     func loadData() {
         updateInterval = storageService.loadUpdateInterval()
         notificationMinutes = storageService.loadNotificationMinutes()
+        newScheduleNotificationEnabled = storageService.loadNewScheduleNotificationEnabled()
         checkNotificationPermission()
         updateStats()
     }
@@ -410,6 +430,7 @@ class SettingsViewModel: ObservableObject {
         }
     }
     
+    // Оновити без сповіщень (ми в додатку)
     func checkForUpdatesNow() {
         Task {
             let queues = storageService.loadQueues()
@@ -417,6 +438,7 @@ class SettingsViewModel: ObservableObject {
                 do {
                     let scheduleData = try await APIService.shared.fetchSchedule(for: queue.queueNumber)
                     
+                    // Просто зберігаємо новий графік без сповіщень
                     if let jsonData = try? JSONEncoder().encode(scheduleData),
                        let jsonString = String(data: jsonData, encoding: .utf8) {
                         storageService.saveScheduleJSON(jsonString, for: queue.id)

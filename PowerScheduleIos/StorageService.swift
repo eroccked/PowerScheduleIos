@@ -88,6 +88,31 @@ class StorageService {
         return minutes > 0 ? minutes : 30
     }
     
+    // MARK: - New Schedule Notifications
+    
+    private let newScheduleNotificationKey = "new_schedule_notification_enabled"
+    private let lastTomorrowScheduleDateKey = "last_tomorrow_schedule_date"
+    
+    /// Зберігає налаштування сповіщень про нові графіки
+    func saveNewScheduleNotificationEnabled(_ enabled: Bool) {
+        sharedDefaults.set(enabled, forKey: newScheduleNotificationKey)
+    }
+    
+    /// Завантажує налаштування сповіщень про нові графіки
+    func loadNewScheduleNotificationEnabled() -> Bool {
+        return sharedDefaults.bool(forKey: newScheduleNotificationKey)
+    }
+    
+    /// Зберігає дату останнього завтрашнього графіка для черги
+    func saveLastTomorrowScheduleDate(_ date: String, for queueId: UUID) {
+        sharedDefaults.set(date, forKey: "\(lastTomorrowScheduleDateKey)_\(queueId.uuidString)")
+    }
+    
+    /// Завантажує дату останнього завтрашнього графіка для черги
+    func loadLastTomorrowScheduleDate(for queueId: UUID) -> String? {
+        return sharedDefaults.string(forKey: "\(lastTomorrowScheduleDateKey)_\(queueId.uuidString)")
+    }
+    
     // MARK: - Cached Schedule (для офлайн режиму)
     
     /// Зберігає графіки (сьогодні + завтра) для черги

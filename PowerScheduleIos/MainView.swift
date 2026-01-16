@@ -471,6 +471,12 @@ struct QueueCard: View {
             // Кешуємо успішно завантажені дані
             StorageService.shared.saveCachedSchedule(allSchedules, for: queue.id)
             
+            // Перевіряємо чи з'явився новий графік на завтра
+            await NotificationService.shared.checkAndNotifyNewTomorrowSchedule(
+                for: queue,
+                tomorrowSchedule: allSchedules.tomorrow
+            )
+            
             // Обробляємо графіки
             processSchedules(allSchedules, isFromCache: false)
             

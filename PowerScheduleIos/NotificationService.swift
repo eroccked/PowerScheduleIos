@@ -5,6 +5,7 @@
 //  Created by Taras Buhra on 28.11.2025.
 //
 //
+
 import Foundation
 import UserNotifications
 
@@ -146,6 +147,57 @@ class NotificationService {
             print("📊 Сповіщення про зміну графіка надіслано для \(queueName)")
         } catch {
             print("Error showing update notification: \(error)")
+        }
+    }
+    
+    // MARK: - Show New Tomorrow Schedule Notification
+    /// Показує сповіщення коли з'явився новий графік на завтра
+    func showNewTomorrowScheduleNotification(queueName: String, tomorrowDate: String, totalHours: Int, shutdownsCount: Int) async {
+        // Перевіряємо чи увімкнено сповіщення про нові графіки
+        guard StorageService.shared.loadNewScheduleNotificationEnabled() else { return }
+        
+        let authorized = await requestAuthorization()
+        guard authorized else { return }
+        
+        let content = UNMutableNotificationContent()
+        content.title = "📅 Графік на завтра"
+        content.body = "\(queueName): \(shutdownsCount) відключень, всього \(totalHours) год без світла"
+        content.sound = .default
+        
+        let request = UNNotificationRequest(
+            identifier: "new_tomorrow_\(queueName)_\(tomorrowDate)",
+            content: content,
+            trigger: nil
+        )
+        
+        do {
+            try await UNUserNotificationCenter.current().add(request)
+            print("📅 Сповіщення про новий графік на завтра надіслано для \(queueName)")
+        } catch {
+            print("Error showing new tomorrow schedule notification: \(error)")
+        }
+    }
+    
+    // MARK: - Check and Notify New Tomorrow Schedule
+    /// Перевіряє чи з'явився новий графік на завтра і сповіщає
+    func checkAndNotifyNewTomorrowSchedule(for queue: PowerQueue, tomorrowSchedule: ScheduleData?) async {
+        guard let tomorrow = tomorrowSchedule else { return }
+        
+        let lastDate = StorageService.shared.loadLastTomorrowScheduleDate(for: queue.id)
+        
+        // Якщо дата завтрашнього графіка нова — сповіщаємо
+        if lastDate != tomorrow.eventDate {
+            StorageService.shared.saveLastTomorrowScheduleDate(tomorrow.eventDate, for: queue.id)
+            
+            // Якщо це не перший запуск (lastDate != nil) — показуємо сповіщення
+            if lastDate != nil {
+                await showNewTomorrowScheduleNotification(
+                    queueName: queue.name,
+                    tomorrowDate: tomorrow.eventDate,
+                    totalHours: tomorrow.totalHours,
+                    shutdownsCount: tomorrow.shutdowns.count
+                )
+            }
         }
     }
     
