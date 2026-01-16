@@ -13,6 +13,7 @@ struct ScheduleView: View {
     let queue: PowerQueue
     @Environment(\.dismiss) var dismiss
     @StateObject private var viewModel: ScheduleViewModel
+    @State private var showDetailedTimeline = false
     
     init(queue: PowerQueue) {
         self.queue = queue
@@ -321,73 +322,99 @@ struct ScheduleView: View {
     
     // MARK: - Timeline Card
     private func timelineCard(_ data: ScheduleData) -> some View {
-        VStack(alignment: .leading, spacing: 14) {
-            HStack {
-                Text("Візуалізація доби")
-                    .font(.system(size: 16, weight: .semibold))
-                    .foregroundColor(.black)
-                
-                Spacer()
-                
-                // Показуємо який день
-                Text(viewModel.selectedDay.rawValue)
-                    .font(.system(size: 12, weight: .medium))
-                    .foregroundColor(.black.opacity(0.5))
-            }
-            
-            HStack {
-                Text("0")
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                Text("6")
-                    .frame(maxWidth: .infinity, alignment: .center)
-                Text("12")
-                    .frame(maxWidth: .infinity, alignment: .center)
-                Text("18")
-                    .frame(maxWidth: .infinity, alignment: .center)
-                Text("24")
-                    .frame(maxWidth: .infinity, alignment: .trailing)
-            }
-            .font(.system(size: 11, weight: .medium))
-            .foregroundColor(.black.opacity(0.5))
-            
-            HStack(spacing: 0) {
-                ForEach(0..<24, id: \.self) { hour in
-                    Rectangle()
-                        .fill(data.hourlyTimeline[hour] ?
-                              Color(hex: "4CAF50") :
-                              Color(hex: "FF5252"))
-                        .frame(height: 45)
-                }
-            }
-            .clipShape(RoundedRectangle(cornerRadius: 7))
-            
-            HStack(spacing: 20) {
-                HStack(spacing: 7) {
-                    Circle()
-                        .fill(Color(hex: "4CAF50"))
-                        .frame(width: 11, height: 11)
-                    Text("Світло є")
-                        .font(.system(size: 12))
-                        .foregroundColor(.black.opacity(0.7))
+        Button(action: {
+            showDetailedTimeline = true
+        }) {
+            VStack(alignment: .leading, spacing: 14) {
+                HStack {
+                    Text("Візуалізація доби")
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundColor(.black)
+                    
+                    Spacer()
+                    
+                    // Показуємо який день + стрілка
+                    HStack(spacing: 4) {
+                        Text(viewModel.selectedDay.rawValue)
+                            .font(.system(size: 12, weight: .medium))
+                            .foregroundColor(.black.opacity(0.5))
+                        
+                        Image(systemName: "chevron.right")
+                            .font(.system(size: 10, weight: .semibold))
+                            .foregroundColor(.black.opacity(0.3))
+                    }
                 }
                 
-                HStack(spacing: 7) {
-                    Circle()
-                        .fill(Color(hex: "FF5252"))
-                        .frame(width: 11, height: 11)
-                    Text("Відключення")
-                        .font(.system(size: 12))
-                        .foregroundColor(.black.opacity(0.7))
+                HStack {
+                    Text("0")
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                    Text("6")
+                        .frame(maxWidth: .infinity, alignment: .center)
+                    Text("12")
+                        .frame(maxWidth: .infinity, alignment: .center)
+                    Text("18")
+                        .frame(maxWidth: .infinity, alignment: .center)
+                    Text("24")
+                        .frame(maxWidth: .infinity, alignment: .trailing)
                 }
+                .font(.system(size: 11, weight: .medium))
+                .foregroundColor(.black.opacity(0.5))
+                
+                HStack(spacing: 0) {
+                    ForEach(0..<24, id: \.self) { hour in
+                        Rectangle()
+                            .fill(data.hourlyTimeline[hour] ?
+                                  Color(hex: "4CAF50") :
+                                  Color(hex: "FF5252"))
+                            .frame(height: 45)
+                    }
+                }
+                .clipShape(RoundedRectangle(cornerRadius: 7))
+                
+                HStack(spacing: 20) {
+                    HStack(spacing: 7) {
+                        Circle()
+                            .fill(Color(hex: "4CAF50"))
+                            .frame(width: 11, height: 11)
+                        Text("Світло є")
+                            .font(.system(size: 12))
+                            .foregroundColor(.black.opacity(0.7))
+                    }
+                    
+                    HStack(spacing: 7) {
+                        Circle()
+                            .fill(Color(hex: "FF5252"))
+                            .frame(width: 11, height: 11)
+                        Text("Відключення")
+                            .font(.system(size: 12))
+                            .foregroundColor(.black.opacity(0.7))
+                    }
+                    
+                    Spacer()
+                    
+                    Text("Детальніше")
+                        .font(.system(size: 11, weight: .medium))
+                        .foregroundColor(.black.opacity(0.4))
+                }
+            }
+            .padding(18)
+            .background(
+                RoundedRectangle(cornerRadius: 14)
+                    .fill(Color.white.opacity(0.85))
+                    .shadow(color: Color.black.opacity(0.08), radius: 7, x: 0, y: 2)
+            )
+        }
+        .buttonStyle(PlainButtonStyle())
+        .padding(.horizontal, 18)
+        .sheet(isPresented: $showDetailedTimeline) {
+            if let schedule = viewModel.currentSchedule {
+                DetailedTimelineView(
+                    scheduleData: schedule,
+                    queueNumber: queue.queueNumber,
+                    selectedDay: viewModel.selectedDay
+                )
             }
         }
-        .padding(18)
-        .background(
-            RoundedRectangle(cornerRadius: 14)
-                .fill(Color.white.opacity(0.85))
-                .shadow(color: Color.black.opacity(0.08), radius: 7, x: 0, y: 2)
-        )
-        .padding(.horizontal, 18)
     }
     
     // MARK: - Shutdowns Section
@@ -535,3 +562,261 @@ struct ScheduleView: View {
 // #Preview {
 //     ScheduleView(queue: PowerQueue(name: "Тестова", queueNumber: "5.2"))
 // }
+
+// MARK: - Detailed Timeline View
+struct DetailedTimelineView: View {
+    let scheduleData: ScheduleData
+    let queueNumber: String
+    let selectedDay: DayOption
+    
+    @Environment(\.dismiss) var dismiss
+    
+    // Поточний час
+    private var currentHour: Int {
+        Calendar.current.component(.hour, from: Date())
+    }
+    
+    private var currentMinute: Int {
+        Calendar.current.component(.minute, from: Date())
+    }
+    
+    // Чи показувати лінію поточного часу (тільки для сьогодні)
+    private var showCurrentTimeLine: Bool {
+        selectedDay == .today
+    }
+    
+    // Висота однієї години
+    private let hourHeight: CGFloat = 60
+    
+    var body: some View {
+        NavigationStack {
+            ZStack {
+                // Фон в стилі додатку
+                LinearGradient(
+                    colors: [
+                        Color(hex: "B8E0E8"),
+                        Color(hex: "C0E5DB"),
+                        Color(hex: "C8E6D5")
+                    ],
+                    startPoint: .top,
+                    endPoint: .bottom
+                )
+                .ignoresSafeArea()
+                
+                VStack(spacing: 0) {
+                    // Заголовок
+                    headerView
+                    
+                    // Номер черги
+                    Text("Черга \(queueNumber)")
+                        .font(.system(size: 14, weight: .medium))
+                        .foregroundColor(.black.opacity(0.6))
+                        .padding(.top, 4)
+                        .padding(.bottom, 12)
+                    
+                    // Графік
+                    ScrollViewReader { proxy in
+                        ScrollView {
+                            VStack(spacing: 0) {
+                                // Картка з графіком
+                                ZStack(alignment: .topLeading) {
+                                    // Сітка годин
+                                    hoursGrid
+                                    
+                                    // Блоки відключень
+                                    shutdownBlocks
+                                    
+                                    // Лінія поточного часу
+                                    if showCurrentTimeLine {
+                                        currentTimeLine
+                                    }
+                                }
+                                .padding(.vertical, 16)
+                                .background(
+                                    RoundedRectangle(cornerRadius: 16)
+                                        .fill(Color.white.opacity(0.85))
+                                        .shadow(color: Color.black.opacity(0.08), radius: 8, x: 0, y: 2)
+                                )
+                                .padding(.horizontal, 16)
+                            }
+                            .padding(.bottom, 100)
+                        }
+                        .onAppear {
+                            // Скролимо до поточного часу
+                            if showCurrentTimeLine {
+                                DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                                    withAnimation {
+                                        proxy.scrollTo(max(0, currentHour - 2), anchor: .top)
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    
+                    // Підсумок внизу
+                    summaryFooter
+                }
+            }
+            .navigationBarHidden(true)
+        }
+    }
+    
+    // MARK: - Header
+    private var headerView: some View {
+        HStack {
+            Button(action: { dismiss() }) {
+                HStack(spacing: 4) {
+                    Image(systemName: "chevron.left")
+                        .font(.system(size: 14, weight: .semibold))
+                    Text("Назад")
+                        .font(.system(size: 16))
+                }
+                .foregroundColor(.black)
+            }
+            
+            Spacer()
+            
+            Text("Графік вимкнень")
+                .font(.system(size: 18, weight: .bold))
+                .foregroundColor(.black)
+            
+            Spacer()
+            
+            // День
+            Text(selectedDay.rawValue)
+                .font(.system(size: 13, weight: .medium))
+                .foregroundColor(.black.opacity(0.5))
+        }
+        .padding(.horizontal, 16)
+        .padding(.top, 24)
+        .padding(.bottom, 8)
+    }
+    
+    // MARK: - Hours Grid
+    private var hoursGrid: some View {
+        VStack(spacing: 0) {
+            ForEach(0..<25, id: \.self) { hour in
+                HStack(spacing: 0) {
+                    // Час зліва
+                    Text(String(format: "%02d:00", hour == 24 ? 0 : hour))
+                        .font(.system(size: 11, weight: .medium))
+                        .foregroundColor(.black.opacity(0.4))
+                        .frame(width: 45, alignment: .leading)
+                    
+                    // Лінія
+                    Rectangle()
+                        .fill(Color.black.opacity(0.08))
+                        .frame(height: 1)
+                }
+                .frame(height: hourHeight)
+                .id(hour)
+            }
+        }
+        .padding(.leading, 12)
+    }
+    
+    // MARK: - Shutdown Blocks
+    private var shutdownBlocks: some View {
+        ZStack(alignment: .topLeading) {
+            ForEach(scheduleData.shutdowns) { shutdown in
+                shutdownBlock(shutdown)
+            }
+        }
+        .padding(.leading, 57)
+        .padding(.trailing, 12)
+    }
+    
+    private func shutdownBlock(_ shutdown: Shutdown) -> some View {
+        let startMinutes = parseTimeToMinutes(shutdown.from)
+        let endMinutes = parseTimeToMinutes(shutdown.to)
+        
+        // Обробка переходу через північ
+        let adjustedEndMinutes = endMinutes <= startMinutes ? endMinutes + 24 * 60 : endMinutes
+        let duration = adjustedEndMinutes - startMinutes
+        
+        let topOffset = CGFloat(startMinutes) / 60.0 * hourHeight
+        let height = CGFloat(duration) / 60.0 * hourHeight
+        
+        let hours = duration / 60
+        let minutes = duration % 60
+        let durationText = minutes > 0 ? "\(hours) год \(minutes) хв" : "\(hours) год"
+        
+        return VStack(alignment: .leading, spacing: 4) {
+            HStack(spacing: 6) {
+                Image(systemName: "bolt.slash.fill")
+                    .font(.system(size: 12))
+                Text(durationText)
+                    .font(.system(size: 13, weight: .semibold))
+            }
+            .foregroundColor(.white)
+            .padding(.top, 8)
+            .padding(.leading, 10)
+            
+            Spacer()
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .frame(height: max(height, 30))
+        .background(
+            RoundedRectangle(cornerRadius: 10)
+                .fill(Color(hex: "FF5252"))
+        )
+        .offset(y: topOffset)
+    }
+    
+    // MARK: - Current Time Line
+    private var currentTimeLine: some View {
+        let totalMinutes = currentHour * 60 + currentMinute
+        let topOffset = CGFloat(totalMinutes) / 60.0 * hourHeight
+        
+        return HStack(spacing: 0) {
+            // Час в кружечку
+            Text(String(format: "%02d:%02d", currentHour, currentMinute))
+                .font(.system(size: 10, weight: .bold))
+                .foregroundColor(.white)
+                .padding(.horizontal, 6)
+                .padding(.vertical, 3)
+                .background(Capsule().fill(Color(hex: "FF9500")))
+            
+            // Лінія
+            Rectangle()
+                .fill(Color(hex: "FF9500"))
+                .frame(height: 2)
+        }
+        .padding(.leading, 4)
+        .padding(.trailing, 12)
+        .offset(y: topOffset)
+    }
+    
+    // MARK: - Summary Footer
+    private var summaryFooter: some View {
+        HStack(spacing: 12) {
+            Image(systemName: "bolt.slash.fill")
+                .font(.system(size: 18))
+                .foregroundColor(Color(hex: "FF5252"))
+            
+            VStack(alignment: .leading, spacing: 2) {
+                Text("Всього без світла")
+                    .font(.system(size: 12))
+                    .foregroundColor(.black.opacity(0.6))
+                
+                Text("\(scheduleData.totalHours) год \(scheduleData.remainingMinutes) хв")
+                    .font(.system(size: 18, weight: .bold))
+                    .foregroundColor(.black)
+            }
+            
+            Spacer()
+        }
+        .padding(16)
+        .background(
+            Color.white.opacity(0.95)
+                .shadow(color: Color.black.opacity(0.1), radius: 10, x: 0, y: -5)
+        )
+    }
+    
+    // MARK: - Helper
+    private func parseTimeToMinutes(_ time: String) -> Int {
+        let parts = time.split(separator: ":").compactMap { Int($0) }
+        guard parts.count == 2 else { return 0 }
+        return parts[0] * 60 + parts[1]
+    }
+}
