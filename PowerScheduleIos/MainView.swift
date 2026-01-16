@@ -468,44 +468,63 @@ struct QueueCard: View {
             // Завантажуємо всі графіки (вчора, сьогодні, завтра)
             let allSchedules = try await APIService.shared.fetchAllSchedules(for: queue.queueNumber)
             
-            // Спочатку перевіряємо сьогоднішній графік
-            if let todaySchedule = allSchedules.today {
-                let currentShutdown = findCurrentShutdown(shutdowns: todaySchedule.shutdowns)
-                
-                if let shutdown = currentShutdown {
-                    // Зараз є відключення
-                    powerStatus = .off
-                    schedulePreview = "Увімкнуть о \(shutdown.to)"
-                    return
-                }
-                
-                // Перевіряємо чи є ще відключення сьогодні
-                if let nextShutdown = findNextShutdown(shutdowns: todaySchedule.shutdowns) {
-                    powerStatus = .on
-                    schedulePreview = "Відключення о \(nextShutdown.from)"
-                    return
-                }
+            // Кешуємо успішно завантажені дані
+            StorageService.shared.saveCachedSchedule(allSchedules, for: queue.id)
+            
+            // Обробляємо графіки
+            processSchedules(allSchedules, isFromCache: false)
+            
+        } catch {
+            // При помилці — пробуємо показати кешовані дані
+            if let cached = StorageService.shared.loadCachedSchedule(for: queue.id),
+               StorageService.shared.isCacheValidForToday(for: queue.id) {
+                // Показуємо кешовані дані з попередженням
+                processSchedules(cached.asAllSchedulesData, isFromCache: true)
+            } else {
+                // Немає кешу або він застарів — жовтий статус
+                powerStatus = .unknown
+                schedulePreview = "Не вдалося оновити дані"
+            }
+        }
+    }
+    
+    /// Обробляє графіки і встановлює статус
+    private func processSchedules(_ allSchedules: AllSchedulesData, isFromCache: Bool) {
+        let cachePrefix = isFromCache ? "⚠️ " : ""
+        
+        // Спочатку перевіряємо сьогоднішній графік
+        if let todaySchedule = allSchedules.today {
+            let currentShutdown = findCurrentShutdown(shutdowns: todaySchedule.shutdowns)
+            
+            if let shutdown = currentShutdown {
+                // Зараз є відключення
+                powerStatus = .off
+                schedulePreview = "\(cachePrefix)Увімкнуть о \(shutdown.to)"
+                return
             }
             
-            // Якщо сьогодні відключень немає/більше немає — дивимось на завтра
-            if let tomorrowSchedule = allSchedules.tomorrow {
+            // Перевіряємо чи є ще відключення сьогодні
+            if let nextShutdown = findNextShutdown(shutdowns: todaySchedule.shutdowns) {
                 powerStatus = .on
-                if let firstShutdown = tomorrowSchedule.shutdowns.first {
-                    schedulePreview = "Завтра відключення о \(firstShutdown.from)"
-                } else {
-                    schedulePreview = "Завтра відключень немає"
-                }
-            } else if allSchedules.today != nil {
-                // Є тільки сьогоднішній графік, і відключень більше немає
-                powerStatus = .on
-                schedulePreview = "Сьогодні відключень більше немає"
-            } else {
-                // Немає даних
-                powerStatus = .unknown
-                schedulePreview = "Дані недоступні"
+                schedulePreview = "\(cachePrefix)Відключення о \(nextShutdown.from)"
+                return
             }
-        } catch {
-            // При помилці — жовтий статус "Інформація відсутня"
+        }
+        
+        // Якщо сьогодні відключень немає/більше немає — дивимось на завтра
+        if let tomorrowSchedule = allSchedules.tomorrow {
+            powerStatus = .on
+            if let firstShutdown = tomorrowSchedule.shutdowns.first {
+                schedulePreview = "\(cachePrefix)Завтра відключення о \(firstShutdown.from)"
+            } else {
+                schedulePreview = "\(cachePrefix)Завтра відключень немає"
+            }
+        } else if allSchedules.today != nil {
+            // Є тільки сьогоднішній графік, і відключень більше немає
+            powerStatus = .on
+            schedulePreview = "\(cachePrefix)Сьогодні відключень більше немає"
+        } else {
+            // Немає даних
             powerStatus = .unknown
             schedulePreview = "Дані недоступні"
         }

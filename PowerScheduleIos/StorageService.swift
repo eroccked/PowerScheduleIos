@@ -4,6 +4,7 @@
 //
 //  Created by Taras Buhra on 28.11.2025.
 //
+
 import Foundation
 import WidgetKit
 
@@ -48,6 +49,8 @@ class StorageService {
         var queues = loadQueues()
         queues.removeAll { $0.id == queue.id }
         saveQueues(queues)
+        // Видаляємо кеш для цієї черги
+        clearCachedSchedule(for: queue.id)
     }
     
     func updateQueue(_ queue: PowerQueue) {
@@ -83,5 +86,52 @@ class StorageService {
     func loadNotificationMinutes() -> Int {
         let minutes = sharedDefaults.integer(forKey: notificationMinutesKey)
         return minutes > 0 ? minutes : 30
+    }
+    
+    // MARK: - Cached Schedule (для офлайн режиму)
+    
+    /// Зберігає графіки (сьогодні + завтра) для черги
+    func saveCachedSchedule(_ allSchedules: AllSchedulesData, for queueId: UUID) {
+        let cache = CachedSchedule(
+            today: allSchedules.today,
+            tomorrow: allSchedules.tomorrow,
+            cachedAt: Date()
+        )
+        
+        if let encoded = try? JSONEncoder().encode(cache) {
+            sharedDefaults.set(encoded, forKey: "cached_schedule_\(queueId.uuidString)")
+        }
+    }
+    
+    /// Завантажує кешовані графіки для черги
+    func loadCachedSchedule(for queueId: UUID) -> CachedSchedule? {
+        guard let data = sharedDefaults.data(forKey: "cached_schedule_\(queueId.uuidString)"),
+              let cache = try? JSONDecoder().decode(CachedSchedule.self, from: data) else {
+            return nil
+        }
+        return cache
+    }
+    
+    /// Перевіряє чи кеш актуальний (сьогоднішній)
+    func isCacheValidForToday(for queueId: UUID) -> Bool {
+        guard let cache = loadCachedSchedule(for: queueId) else { return false }
+        return Calendar.current.isDateInToday(cache.cachedAt)
+    }
+    
+    /// Видаляє кеш для черги
+    func clearCachedSchedule(for queueId: UUID) {
+        sharedDefaults.removeObject(forKey: "cached_schedule_\(queueId.uuidString)")
+    }
+}
+
+// MARK: - Cached Schedule Model
+struct CachedSchedule: Codable {
+    let today: ScheduleData?
+    let tomorrow: ScheduleData?
+    let cachedAt: Date
+    
+    /// Повертає AllSchedulesData для сумісності
+    var asAllSchedulesData: AllSchedulesData {
+        AllSchedulesData(yesterday: nil, today: today, tomorrow: tomorrow)
     }
 }

@@ -5,6 +5,7 @@
 //  Created by Taras Buhra on 28.11.2025.
 //
 //
+
 import SwiftUI
 
 // MARK: - Schedule View
@@ -83,6 +84,11 @@ struct ScheduleView: View {
     private func scheduleContent(_ data: ScheduleData) -> some View {
         ScrollView {
             VStack(spacing: 20) {
+                // Банер попередження якщо дані з кешу
+                if viewModel.isFromCache {
+                    offlineBanner
+                }
+                
                 // Шапка з назвою та перемикачем днів
                 VStack(spacing: 12) {
                     HStack {
@@ -118,6 +124,45 @@ struct ScheduleView: View {
             }
             .padding(.bottom, 40)
         }
+    }
+    
+    // MARK: - Offline Banner
+    private var offlineBanner: some View {
+        HStack(spacing: 10) {
+            Image(systemName: "wifi.slash")
+                .font(.system(size: 16, weight: .medium))
+                .foregroundColor(Color(hex: "856404"))
+            
+            VStack(alignment: .leading, spacing: 2) {
+                Text("Немає з'єднання")
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundColor(Color(hex: "856404"))
+                
+                Text("Показані дані можуть бути неактуальними")
+                    .font(.system(size: 11))
+                    .foregroundColor(Color(hex: "856404").opacity(0.8))
+            }
+            
+            Spacer()
+            
+            Button(action: {
+                viewModel.fetchSchedule()
+            }) {
+                Image(systemName: "arrow.clockwise")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundColor(Color(hex: "856404"))
+            }
+        }
+        .padding(12)
+        .background(
+            RoundedRectangle(cornerRadius: 10)
+                .fill(Color(hex: "FFF3CD"))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 10)
+                        .stroke(Color(hex: "FFEEBA"), lineWidth: 1)
+                )
+        )
+        .padding(.horizontal, 16)
     }
     
     // MARK: - Day Picker Segment (компактний стиль Дія)

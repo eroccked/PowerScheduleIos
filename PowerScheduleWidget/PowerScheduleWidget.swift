@@ -163,83 +163,97 @@ struct PowerScheduleProvider: AppIntentTimelineProvider {
             // Завантажуємо всі графіки (сьогодні і завтра)
             let allSchedules = try await WidgetAPIService.fetchAllSchedules(for: queue.queueNumber)
             
-            let statusText: String
-            let powerStatus: WidgetPowerStatus
+            // Кешуємо успішно завантажені дані
+            WidgetCacheService.saveCachedSchedule(allSchedules, for: queue.id)
             
-            // Спочатку перевіряємо сьогоднішній графік
-            if let todaySchedule = allSchedules.today {
-                let currentShutdown = findCurrentShutdown(shutdowns: todaySchedule.shutdowns)
-                
-                if let shutdown = currentShutdown {
-                    // Зараз є відключення
-                    powerStatus = .off
-                    statusText = "Увімкнуть о \(shutdown.to)"
-                    
-                    return Entry(
-                        date: Date(),
-                        queueName: queue.name,
-                        queueNumber: queue.queueNumber,
-                        powerStatus: powerStatus,
-                        statusText: statusText,
-                        updatedAt: updatedAt,
-                        isPlaceholder: false
-                    )
-                }
-                
-                // Перевіряємо чи є ще відключення сьогодні
-                if let nextShutdown = findNextShutdown(shutdowns: todaySchedule.shutdowns) {
-                    powerStatus = .on
-                    statusText = "Відключення о \(nextShutdown.from)"
-                    
-                    return Entry(
-                        date: Date(),
-                        queueName: queue.name,
-                        queueNumber: queue.queueNumber,
-                        powerStatus: powerStatus,
-                        statusText: statusText,
-                        updatedAt: updatedAt,
-                        isPlaceholder: false
-                    )
-                }
-            }
+            return processSchedulesForWidget(allSchedules, queue: queue, updatedAt: updatedAt, isFromCache: false)
             
-            // Якщо сьогодні відключень немає/більше немає — дивимось на завтра
-            if let tomorrowSchedule = allSchedules.tomorrow {
-                powerStatus = .on
-                if let firstShutdown = tomorrowSchedule.shutdowns.first {
-                    statusText = "Завтра відключення о \(firstShutdown.from)"
-                } else {
-                    statusText = "Завтра відключень немає"
-                }
-            } else if allSchedules.today != nil {
-                powerStatus = .on
-                statusText = "Сьогодні відключень більше немає"
-            } else {
-                powerStatus = .unknown
-                statusText = "Дані недоступні"
-            }
-            
-            return Entry(
-                date: Date(),
-                queueName: queue.name,
-                queueNumber: queue.queueNumber,
-                powerStatus: powerStatus,
-                statusText: statusText,
-                updatedAt: updatedAt,
-                isPlaceholder: false
-            )
         } catch {
-            // При помилці — жовтий статус "Інформація відсутня"
-            return Entry(
-                date: Date(),
-                queueName: queue.name,
-                queueNumber: queue.queueNumber,
-                powerStatus: .unknown,
-                statusText: "Дані недоступні",
-                updatedAt: updatedAt,
-                isPlaceholder: false
-            )
+            // При помилці — пробуємо показати кешовані дані
+            if let cached = WidgetCacheService.loadCachedSchedule(for: queue.id),
+               WidgetCacheService.isCacheValidForToday(for: queue.id) {
+                return processSchedulesForWidget(cached.asAllSchedules, queue: queue, updatedAt: updatedAt, isFromCache: true)
+            } else {
+                // Немає кешу або він застарів
+                return Entry(
+                    date: Date(),
+                    queueName: queue.name,
+                    queueNumber: queue.queueNumber,
+                    powerStatus: .unknown,
+                    statusText: "Не вдалося оновити",
+                    updatedAt: updatedAt,
+                    isPlaceholder: false
+                )
+            }
         }
+    }
+    
+    private func processSchedulesForWidget(_ allSchedules: WidgetAPIService.AllWidgetSchedules, queue: WidgetPowerQueue, updatedAt: String, isFromCache: Bool) -> Entry {
+        let cachePrefix = isFromCache ? "⚠️ " : ""
+        
+        var statusText: String
+        var powerStatus: WidgetPowerStatus
+        
+        // Спочатку перевіряємо сьогоднішній графік
+        if let todaySchedule = allSchedules.today {
+            let currentShutdown = findCurrentShutdown(shutdowns: todaySchedule.shutdowns)
+            
+            if let shutdown = currentShutdown {
+                powerStatus = .off
+                statusText = "\(cachePrefix)Увімкнуть о \(shutdown.to)"
+                
+                return Entry(
+                    date: Date(),
+                    queueName: queue.name,
+                    queueNumber: queue.queueNumber,
+                    powerStatus: powerStatus,
+                    statusText: statusText,
+                    updatedAt: updatedAt,
+                    isPlaceholder: false
+                )
+            }
+            
+            if let nextShutdown = findNextShutdown(shutdowns: todaySchedule.shutdowns) {
+                powerStatus = .on
+                statusText = "\(cachePrefix)Відключення о \(nextShutdown.from)"
+                
+                return Entry(
+                    date: Date(),
+                    queueName: queue.name,
+                    queueNumber: queue.queueNumber,
+                    powerStatus: powerStatus,
+                    statusText: statusText,
+                    updatedAt: updatedAt,
+                    isPlaceholder: false
+                )
+            }
+        }
+        
+        // Дивимось на завтра
+        if let tomorrowSchedule = allSchedules.tomorrow {
+            powerStatus = .on
+            if let firstShutdown = tomorrowSchedule.shutdowns.first {
+                statusText = "\(cachePrefix)Завтра о \(firstShutdown.from)"
+            } else {
+                statusText = "\(cachePrefix)Завтра відключень немає"
+            }
+        } else if allSchedules.today != nil {
+            powerStatus = .on
+            statusText = "\(cachePrefix)Відключень більше немає"
+        } else {
+            powerStatus = .unknown
+            statusText = "Дані недоступні"
+        }
+        
+        return Entry(
+            date: Date(),
+            queueName: queue.name,
+            queueNumber: queue.queueNumber,
+            powerStatus: powerStatus,
+            statusText: statusText,
+            updatedAt: updatedAt,
+            isPlaceholder: false
+        )
     }
     
     private func findCurrentShutdown(shutdowns: [WidgetShutdown]) -> WidgetShutdown? {
@@ -550,6 +564,49 @@ struct WidgetAPIService {
             }
         }
         return false
+    }
+}
+
+// MARK: - Widget Cache Service
+struct WidgetCacheService {
+    private static var sharedDefaults: UserDefaults {
+        UserDefaults(suiteName: appGroupID) ?? .standard
+    }
+    
+    static func saveCachedSchedule(_ allSchedules: WidgetAPIService.AllWidgetSchedules, for queueId: UUID) {
+        let cache = WidgetCachedSchedule(
+            today: allSchedules.today,
+            tomorrow: allSchedules.tomorrow,
+            cachedAt: Date()
+        )
+        
+        if let encoded = try? JSONEncoder().encode(cache) {
+            sharedDefaults.set(encoded, forKey: "widget_cache_\(queueId.uuidString)")
+        }
+    }
+    
+    static func loadCachedSchedule(for queueId: UUID) -> WidgetCachedSchedule? {
+        guard let data = sharedDefaults.data(forKey: "widget_cache_\(queueId.uuidString)"),
+              let cache = try? JSONDecoder().decode(WidgetCachedSchedule.self, from: data) else {
+            return nil
+        }
+        return cache
+    }
+    
+    static func isCacheValidForToday(for queueId: UUID) -> Bool {
+        guard let cache = loadCachedSchedule(for: queueId) else { return false }
+        return Calendar.current.isDateInToday(cache.cachedAt)
+    }
+}
+
+// MARK: - Widget Cached Schedule
+struct WidgetCachedSchedule: Codable {
+    let today: WidgetScheduleData?
+    let tomorrow: WidgetScheduleData?
+    let cachedAt: Date
+    
+    var asAllSchedules: WidgetAPIService.AllWidgetSchedules {
+        WidgetAPIService.AllWidgetSchedules(today: today, tomorrow: tomorrow)
     }
 }
 

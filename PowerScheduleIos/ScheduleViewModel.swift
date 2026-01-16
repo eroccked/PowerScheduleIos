@@ -15,6 +15,7 @@ class ScheduleViewModel: ObservableObject {
     @Published var selectedDay: DayOption = .today
     @Published var isLoading = false
     @Published var errorMessage: String?
+    @Published var isFromCache = false  // Чи дані з кешу
     @Published var notificationsEnabled: Bool {
         didSet {
             updateQueueSettings()
@@ -70,11 +71,17 @@ class ScheduleViewModel: ObservableObject {
     func fetchSchedule() {
         isLoading = true
         errorMessage = nil
+        isFromCache = false
         
         Task {
             do {
                 let data = try await apiService.fetchAllSchedules(for: queue.queueNumber)
+                
+                // Кешуємо успішно завантажені дані
+                storageService.saveCachedSchedule(data, for: queue.id)
+                
                 allSchedules = data
+                isFromCache = false
                 
                 selectInitialDay()
                 
@@ -84,8 +91,20 @@ class ScheduleViewModel: ObservableObject {
                     scheduleNotificationsFor(schedule)
                 }
             } catch {
-                errorMessage = error.localizedDescription
-                isLoading = false
+                // При помилці — пробуємо показати кешовані дані
+                if let cached = storageService.loadCachedSchedule(for: queue.id),
+                   storageService.isCacheValidForToday(for: queue.id) {
+                    // Показуємо кешовані дані
+                    allSchedules = cached.asAllSchedulesData
+                    isFromCache = true
+                    selectInitialDay()
+                    isLoading = false
+                    // Не показуємо errorMessage, бо є кеш
+                } else {
+                    // Немає кешу або він застарів
+                    errorMessage = "Не вдалося завантажити дані. Перевірте підключення до інтернету."
+                    isLoading = false
+                }
             }
         }
     }
@@ -120,7 +139,16 @@ class ScheduleViewModel: ObservableObject {
             let toParts = shutdown.to.split(separator: ":").compactMap { Int($0) }
             guard toParts.count == 2 else { continue }
             
-            let toMinutes = toParts[0] * 60 + toParts[1]
+            var toMinutes = toParts[0] * 60 + toParts[1]
+            
+            // Обробка переходу через північ
+            let fromParts = shutdown.from.split(separator: ":").compactMap { Int($0) }
+            if fromParts.count == 2 {
+                let fromMinutes = fromParts[0] * 60 + fromParts[1]
+                if toMinutes <= fromMinutes {
+                    toMinutes += 24 * 60
+                }
+            }
             
             if toMinutes > currentTotalMinutes {
                 return true
