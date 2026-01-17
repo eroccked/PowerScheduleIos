@@ -200,6 +200,24 @@ struct PowerScheduleProvider: AppIntentTimelineProvider {
             
             if let shutdown = currentShutdown {
                 powerStatus = .off
+                
+                // Перевіряємо чи відключення до півночі і чи завтра продовжується з 00:00
+                if shutdown.to == "00:00", let tomorrowSchedule = allSchedules.tomorrow {
+                    if let continuedShutdown = tomorrowSchedule.shutdowns.first(where: { $0.from == "00:00" }) {
+                        statusText = "\(cachePrefix)Увімкнуть о \(continuedShutdown.to)"
+                        
+                        return Entry(
+                            date: Date(),
+                            queueName: queue.name,
+                            queueNumber: queue.queueNumber,
+                            powerStatus: powerStatus,
+                            statusText: statusText,
+                            updatedAt: updatedAt,
+                            isPlaceholder: false
+                        )
+                    }
+                }
+                
                 statusText = "\(cachePrefix)Увімкнуть о \(shutdown.to)"
                 
                 return Entry(

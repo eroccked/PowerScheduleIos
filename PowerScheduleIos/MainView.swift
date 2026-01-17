@@ -505,6 +505,16 @@ struct QueueCard: View {
             if let shutdown = currentShutdown {
                 // Зараз є відключення
                 powerStatus = .off
+                
+                // Перевіряємо чи відключення до півночі і чи завтра продовжується з 00:00
+                if shutdown.to == "00:00", let tomorrowSchedule = allSchedules.tomorrow {
+                    // Шукаємо відключення що починається з 00:00
+                    if let continuedShutdown = tomorrowSchedule.shutdowns.first(where: { $0.from == "00:00" }) {
+                        schedulePreview = "\(cachePrefix)Увімкнуть о \(continuedShutdown.to) (завтра)"
+                        return
+                    }
+                }
+                
                 schedulePreview = "\(cachePrefix)Увімкнуть о \(shutdown.to)"
                 return
             }

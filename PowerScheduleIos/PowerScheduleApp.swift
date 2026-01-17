@@ -5,6 +5,8 @@
 //  Created by Taras Buhra on 28.11.2025.
 //
 //
+
+
 import SwiftUI
 import BackgroundTasks
 import UserNotifications
@@ -31,11 +33,52 @@ class AppDelegate: NSObject, UIApplicationDelegate {
         
         Task {
             await NotificationService.shared.requestAuthorization()
+            
+            // Перевіряємо новий графік на завтра при запуску
+            await checkNewTomorrowScheduleOnLaunch()
         }
         
         registerBackgroundTasks()
         
         return true
+    }
+    
+    /// Перевіряє чи з'явився новий графік на завтра при запуску
+    private func checkNewTomorrowScheduleOnLaunch() async {
+        guard StorageService.shared.loadNewScheduleNotificationEnabled() else { return }
+        
+        let queues = StorageService.shared.loadQueues()
+        
+        let queueToCheck: (id: UUID, name: String, number: String)
+        
+        if let firstQueue = queues.first {
+            queueToCheck = (firstQueue.id, firstQueue.name, firstQueue.queueNumber)
+        } else {
+            queueToCheck = (UUID(), "Черга 1.1", "1.1")
+        }
+        
+        do {
+            let allSchedules = try await APIService.shared.fetchAllSchedules(for: queueToCheck.number)
+            
+            guard let tomorrow = allSchedules.tomorrow else { return }
+            
+            let lastDate = StorageService.shared.loadLastTomorrowScheduleDate(for: queueToCheck.id)
+            
+            if lastDate != tomorrow.eventDate {
+                StorageService.shared.saveLastTomorrowScheduleDate(tomorrow.eventDate, for: queueToCheck.id)
+                
+                if lastDate != nil {
+                    await NotificationService.shared.showNewTomorrowScheduleNotification(
+                        queueName: queueToCheck.name,
+                        tomorrowDate: tomorrow.eventDate,
+                        totalHours: tomorrow.totalHours,
+                        shutdownsCount: tomorrow.shutdowns.count
+                    )
+                }
+            }
+        } catch {
+            print("Error checking tomorrow schedule on launch: \(error)")
+        }
     }
     
     private func registerBackgroundTasks() {
@@ -107,6 +150,9 @@ class BackgroundUpdateOperation: Operation {
             let queues = StorageService.shared.loadQueues()
             let minutesBefore = StorageService.shared.loadNotificationMinutes()
             
+            // Перевіряємо новий графік на завтра по першій черзі або по 1.1
+            await checkNewTomorrowSchedule(queues: queues)
+            
             for queue in queues where queue.isAutoUpdateEnabled {
                 do {
                     let scheduleData = try await APIService.shared.fetchSchedule(for: queue.queueNumber)
@@ -143,5 +189,47 @@ class BackgroundUpdateOperation: Operation {
         }
         
         semaphore.wait()
+    }
+    
+    /// Перевіряє чи з'явився новий графік на завтра
+    private func checkNewTomorrowSchedule(queues: [PowerQueue]) async {
+        // Перевіряємо чи увімкнено сповіщення
+        guard StorageService.shared.loadNewScheduleNotificationEnabled() else { return }
+        
+        // Беремо першу чергу зі списку, або використовуємо 1.1
+        let queueToCheck: (id: UUID, name: String, number: String)
+        
+        if let firstQueue = queues.first {
+            queueToCheck = (firstQueue.id, firstQueue.name, firstQueue.queueNumber)
+        } else {
+            // Якщо черг немає — перевіряємо по 1.1
+            queueToCheck = (UUID(), "Черга 1.1", "1.1")
+        }
+        
+        do {
+            let allSchedules = try await APIService.shared.fetchAllSchedules(for: queueToCheck.number)
+            
+            guard let tomorrow = allSchedules.tomorrow else { return }
+            
+            let lastDate = StorageService.shared.loadLastTomorrowScheduleDate(for: queueToCheck.id)
+            
+            // Якщо дата завтрашнього графіка нова — сповіщаємо
+            if lastDate != tomorrow.eventDate {
+                StorageService.shared.saveLastTomorrowScheduleDate(tomorrow.eventDate, for: queueToCheck.id)
+                
+                // Якщо це не перший запуск — показуємо сповіщення
+                if lastDate != nil {
+                    await NotificationService.shared.showNewTomorrowScheduleNotification(
+                        queueName: queueToCheck.name,
+                        tomorrowDate: tomorrow.eventDate,
+                        totalHours: tomorrow.totalHours,
+                        shutdownsCount: tomorrow.shutdowns.count
+                    )
+                    print("📅 Новий графік на завтра виявлено для \(queueToCheck.name)")
+                }
+            }
+        } catch {
+            print("Error checking tomorrow schedule: \(error)")
+        }
     }
 }
